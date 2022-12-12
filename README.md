@@ -8,9 +8,9 @@ cargo run .
 
 ## Todo
 
-- [ ] Add CLI parameters for retro room id and username
+- [x] Add CLI parameters for retro room id and username
 - [ ] Add multiplayer
-- [ ] List added notes
+- [x] List added notes
 - [ ] Select notes with arrow up/down
 - [ ] Vote/unvote for selected note
 - [ ] Add emotion to note

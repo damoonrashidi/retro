@@ -24,15 +24,17 @@ impl Display for Sentiment {
 pub struct Note {
     pub id: String,
     pub text: String,
+    pub author: String,
     pub sentiment: Sentiment,
     pub votes: u8,
 }
 
 impl Note {
-    pub fn new(text: String, id: String) -> Self {
+    pub fn new(author: String, text: String) -> Self {
         Note {
-            text,
-            id,
+            text: text.clone(),
+            author,
+            id: text.clone(),
             sentiment: Sentiment::Neutral,
             votes: 0,
         }

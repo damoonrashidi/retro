@@ -7,13 +7,15 @@ use std::io;
 use tui::backend::CrosstermBackend;
 use tui::layout::Rect;
 use tui::style::{Color, Modifier, Style};
-use tui::widgets::{Block, Borders, Table, TableState};
+use tui::widgets::{Block, Borders, List, ListItem};
 use tui::Terminal;
 use tui_textarea::{CursorMove, Input, Key, TextArea};
 
+use crate::cli::RetroArgs;
 use crate::note::Note;
 use crate::state::State;
 
+mod cli;
 mod note;
 mod state;
 
@@ -49,6 +51,7 @@ impl fmt::Display for Mode {
 fn main() -> io::Result<()> {
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
+    let args = RetroArgs::new();
 
     enable_raw_mode()?;
     crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -58,12 +61,17 @@ fn main() -> io::Result<()> {
     let mut textarea = TextArea::default();
     let mut mode = Mode::Normal;
     let mut state = State::new();
-    let mut table_state = TableState::default();
 
     loop {
-        let note_table = Table::new([])
-            .block(Block::default().borders(Borders::ALL).title("Notes"))
-            .highlight_symbol(">> ");
+        let note_list = List::new(
+            state
+                .notes_as_list()
+                .into_iter()
+                .map(|note| ListItem::new(format!("{}: {}", note.author, note.text)))
+                .collect::<Vec<ListItem>>(),
+        )
+        .block(Block::default().borders(Borders::ALL).title("Notes"))
+        .highlight_symbol(">> ");
 
         let block = Block::default().borders(Borders::ALL).title("Note");
         textarea.set_block(block);
@@ -72,6 +80,10 @@ fn main() -> io::Result<()> {
         let help_text = Block::default()
             .title(format!("{}", mode))
             .style(Style::default().fg(fg).bg(bg));
+
+        let room_info = Block::default().title(format!("{} @ {}", args.display_name, args.room));
+        let participants_info =
+            Block::default().title(format!("{} participants", state.participants.len()));
 
         textarea.set_cursor_style(
             Style::default()
@@ -84,18 +96,23 @@ fn main() -> io::Result<()> {
 
         term.draw(|f| {
             f.render_widget(textarea.widget(), Rect::new(0, 0, rect.width, 5));
-            f.render_stateful_widget(
-                note_table,
-                Rect::new(0, 6, rect.width, rect.height - 10),
-                &mut table_state,
+            f.render_widget(note_list, Rect::new(0, 6, rect.width, rect.height - 7));
+            f.render_widget(
+                help_text,
+                Rect::new(0, rect.height - 1, format!("{}", mode).len() as u16, 1),
             );
             f.render_widget(
-                help_text.clone(),
-                Rect::new(0, rect.height - 1, format!("{}", mode).len() as u16, 1),
+                room_info,
+                Rect::new(format!("{}", mode).len() as u16 + 1, rect.height - 1, 50, 1),
+            );
+            f.render_widget(
+                participants_info,
+                Rect::new(rect.width - 14, rect.height - 1, 14, 1),
             );
         })?;
 
         let input = crossterm::event::read()?.into();
+
         match mode {
             Mode::Normal => match input {
                 Input {
@@ -121,7 +138,7 @@ fn main() -> io::Result<()> {
                 } => {
                     let value = textarea.lines().join("\n");
                     if !textarea.is_empty() {
-                        state.add_note(Note::new(value.clone(), value.clone()));
+                        state.add_note(Note::new(args.display_name.clone(), value.clone()));
                     }
                 }
                 Input {
@@ -165,7 +182,7 @@ fn main() -> io::Result<()> {
                 } => {
                     mode = Mode::Normal; // Back to normal mode with Esc or Ctrl+C
                 }
-                _ => println!("{:?}", input),
+                _ => {}
             },
             Mode::Vote => match input {
                 Input { key: Key::Esc, .. }
@@ -176,7 +193,7 @@ fn main() -> io::Result<()> {
                 } => {
                     mode = Mode::Normal; // Back to normal mode with Esc or Ctrl+C
                 }
-                _ => println!("{:?}", input),
+                _ => {}
             },
         }
     }

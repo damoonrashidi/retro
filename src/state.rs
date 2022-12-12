@@ -5,6 +5,7 @@ use crate::note::Note;
 pub struct State {
     notes: HashMap<String, Note>,
     pub selected_row: Option<usize>,
+    pub participants: Vec<String>,
 }
 
 impl State {
@@ -12,6 +13,7 @@ impl State {
         State {
             notes: HashMap::new(),
             selected_row: None,
+            participants: vec![],
         }
     }
 
@@ -81,6 +83,7 @@ mod tests {
         state.add_note(Note {
             id: "id".to_string(),
             text: "text".to_string(),
+            author: "Retro Guy".to_string(),
             sentiment: crate::note::Sentiment::Happy,
             votes: 5,
         });
