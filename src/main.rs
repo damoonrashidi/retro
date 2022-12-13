@@ -1,3 +1,7 @@
+mod cli;
+mod note;
+mod state;
+
 use core::fmt;
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::terminal::{
@@ -14,10 +18,6 @@ use tui_textarea::{CursorMove, Input, Key, TextArea};
 use crate::cli::RetroArgs;
 use crate::note::Note;
 use crate::state::State;
-
-mod cli;
-mod note;
-mod state;
 
 #[derive(PartialEq, Eq)]
 enum Mode {
@@ -72,16 +72,10 @@ fn main() -> io::Result<()> {
                 .map(|(i, note)| {
                     if let Some(selected_row) = state.selected_row {
                         if i == selected_row && (mode == Mode::Group || mode == Mode::Vote) {
-                            return ListItem::new(format!(">> {}: {}", note.author, note.text))
-                                .style(
-                                    Style::default()
-                                        .fg(Color::Black)
-                                        .bg(Color::White)
-                                        .add_modifier(Modifier::BOLD),
-                                );
+                            return build_list_item(&note, &state, &mode, selected_row == i);
                         }
                     }
-                    ListItem::new(format!("{}: {}", note.author, note.text))
+                    build_list_item(&note, &state, &mode, false)
                 })
                 .collect::<Vec<ListItem>>(),
         )
@@ -250,4 +244,13 @@ fn main() -> io::Result<()> {
     println!("Lines: {:?}", textarea.lines());
 
     Ok(())
+}
+
+fn build_list_item<'a>(note: &Note, state: &State, mode: &Mode, is_selected: bool) -> ListItem<'a> {
+    ListItem::new(format!(">> {}: {}", note.author, note.text)).style(
+        Style::default()
+            .fg(Color::Black)
+            .bg(Color::White)
+            .add_modifier(Modifier::BOLD),
+    )
 }

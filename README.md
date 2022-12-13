@@ -16,4 +16,5 @@ cargo run .
 - [x] List added notes
 - [x] Select notes with arrow up/down
 - [ ] Vote/unvote for selected note
+- [ ] Group notes
 - [ ] Add emotion to note
