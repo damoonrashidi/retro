@@ -6,6 +6,7 @@ pub struct State {
     notes: HashMap<String, Note>,
     pub selected_row: Option<usize>,
     pub participants: Vec<String>,
+    my_votes: Vec<String>,
 }
 
 impl State {
@@ -14,15 +15,14 @@ impl State {
             notes: HashMap::new(),
             selected_row: None,
             participants: vec![],
+            my_votes: vec![],
         }
     }
 
-    #[allow(unused)]
     pub fn notes_as_list(&self) -> Vec<Note> {
         self.notes.values().cloned().collect()
     }
 
-    #[allow(unused)]
     pub fn add_note(&mut self, note: Note) -> () {
         self.notes.insert(note.id.clone(), note);
     }
@@ -31,22 +31,39 @@ impl State {
     pub fn upvote(&mut self, id: String) -> () {
         if let Some(note) = self.notes.get_mut(&id) {
             note.votes += 1;
+            self.my_votes.push(note.id.clone());
         }
     }
 
     #[allow(unused)]
     pub fn downvote(&mut self, id: String) -> () {
         if let Some(note) = self.notes.get_mut(&id) {
-            note.votes -= 1;
+            if self.my_votes.contains(&note.id) {
+                note.votes -= 1;
+            }
         }
     }
 
     #[allow(unused)]
+    pub fn group_notes(&mut self, id1: &String, id2: &String) -> () {
+        let first = self.notes.get(id1).unwrap();
+        let second = self.notes.get(id2).unwrap();
+
+        let merged = Note {
+            author: "Multiple authors".into(),
+            text: format!("{}\n{}", first.text, second.text),
+            id: first.id.clone(),
+            sentiment: crate::note::Sentiment::Neutral,
+            votes: first.votes + second.votes,
+        };
+
+        self.notes.insert(first.id.clone(), merged);
+    }
+
     pub fn select_row(&mut self, index: usize) {
         self.selected_row = Some(index);
     }
 
-    #[allow(unused)]
     pub fn deselect_row(&mut self) {
         self.selected_row = None;
     }

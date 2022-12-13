@@ -72,10 +72,10 @@ fn main() -> io::Result<()> {
                 .map(|(i, note)| {
                     if let Some(selected_row) = state.selected_row {
                         if i == selected_row && (mode == Mode::Group || mode == Mode::Vote) {
-                            return build_list_item(&note, &state, &mode, selected_row == i);
+                            return build_list_item(&note, &i, &mode, selected_row == i);
                         }
                     }
-                    build_list_item(&note, &state, &mode, false)
+                    build_list_item(&note, &i, &mode, false)
                 })
                 .collect::<Vec<ListItem>>(),
         )
@@ -228,6 +228,14 @@ fn main() -> io::Result<()> {
                         state.select_row(0);
                     }
                 }
+                Input {
+                    key: Key::Enter, ..
+                } => {
+                    if let Some(index) = state.selected_row {
+                        let note_id = state.notes_as_list().get(index).unwrap().id.clone();
+                        state.upvote(note_id);
+                    }
+                }
                 _ => {}
             },
         }
@@ -246,11 +254,49 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn build_list_item<'a>(note: &Note, state: &State, mode: &Mode, is_selected: bool) -> ListItem<'a> {
-    ListItem::new(format!(">> {}: {}", note.author, note.text)).style(
+fn build_list_item<'a>(note: &Note, index: &usize, mode: &Mode, is_selected: bool) -> ListItem<'a> {
+    let style = if is_selected && (mode == &Mode::Group || mode == &Mode::Vote) {
         Style::default()
             .fg(Color::Black)
-            .bg(Color::White)
-            .add_modifier(Modifier::BOLD),
-    )
+            .bg(match mode {
+                Mode::Vote => Color::Green,
+                Mode::Group => Color::Red,
+                _ => unreachable!(),
+            })
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+
+    let votes = if note.votes > 0 {
+        format!("+{}", note.votes)
+    } else {
+        "".to_string()
+    };
+
+    let display = match mode {
+        Mode::Normal => format!("{}: {} {}", note.author, note.text, votes),
+        Mode::Insert => format!("{}: {} {}", note.author, note.text, votes),
+        Mode::Vote => format!(
+            "{}{}: {} {}",
+            if is_selected { ">>" } else { "" },
+            note.author,
+            note.text,
+            votes
+        ),
+        Mode::Group => format!(
+            "{}{} {}: {} {}",
+            if is_selected {
+                "".to_string()
+            } else {
+                format!("{}. ", index)
+            },
+            if is_selected { ">>" } else { "" },
+            note.author,
+            note.text,
+            votes
+        ),
+    };
+
+    ListItem::new(display).style(style)
 }
