@@ -118,10 +118,15 @@ fn main() -> io::Result<()> {
                 Input {
                     key: Key::Enter, ..
                 } => {
-                    let value = textarea.lines().join("\n");
                     if !textarea.is_empty() {
+                        let value = textarea.lines().join("\n");
                         state.add_note(Note::new(args.display_name.clone(), value.clone()));
                     }
+                    // @Todo: clear the textarea like a non-idiot
+                    textarea.delete_line_by_head();
+                    textarea.delete_line_by_head();
+                    textarea.delete_line_by_head();
+                    textarea.delete_line_by_head();
                 }
                 Input {
                     key: Key::Char('q'),
