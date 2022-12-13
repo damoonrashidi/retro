@@ -19,6 +19,7 @@ mod cli;
 mod note;
 mod state;
 
+#[derive(PartialEq, Eq)]
 enum Mode {
     Normal,
     Insert,
@@ -67,11 +68,24 @@ fn main() -> io::Result<()> {
             state
                 .notes_as_list()
                 .into_iter()
-                .map(|note| ListItem::new(format!("{}: {}", note.author, note.text)))
+                .enumerate()
+                .map(|(i, note)| {
+                    if let Some(selected_row) = state.selected_row {
+                        if i == selected_row && (mode == Mode::Group || mode == Mode::Vote) {
+                            return ListItem::new(format!(">> {}: {}", note.author, note.text))
+                                .style(
+                                    Style::default()
+                                        .fg(Color::Black)
+                                        .bg(Color::White)
+                                        .add_modifier(Modifier::BOLD),
+                                );
+                        }
+                    }
+                    ListItem::new(format!("{}: {}", note.author, note.text))
+                })
                 .collect::<Vec<ListItem>>(),
         )
-        .block(Block::default().borders(Borders::ALL).title("Notes"))
-        .highlight_symbol(">> ");
+        .block(Block::default().borders(Borders::ALL).title("Notes"));
 
         let block = Block::default().borders(Borders::ALL).title("Note");
         textarea.set_block(block);
@@ -82,6 +96,7 @@ fn main() -> io::Result<()> {
             .style(Style::default().fg(fg).bg(bg));
 
         let room_info = Block::default().title(format!("{} @ {}", args.display_name, args.room));
+
         let participants_info =
             Block::default().title(format!("{} participants", state.participants.len()));
 
@@ -126,12 +141,14 @@ fn main() -> io::Result<()> {
                     ..
                 } => {
                     mode = Mode::Group;
+                    state.select_row(0);
                 }
                 Input {
                     key: Key::Char('v'),
                     ..
                 } => {
                     mode = Mode::Vote;
+                    state.select_row(0);
                 }
                 Input {
                     key: Key::Enter, ..
@@ -174,24 +191,48 @@ fn main() -> io::Result<()> {
                 }
             },
             Mode::Group => match input {
-                Input { key: Key::Esc, .. }
-                | Input {
-                    key: Key::Char('c'),
-                    ctrl: true,
-                    ..
-                } => {
-                    mode = Mode::Normal; // Back to normal mode with Esc or Ctrl+C
+                Input { key: Key::Esc, .. } => {
+                    mode = Mode::Normal;
+                    state.deselect_row()
+                }
+                Input { key: Key::Up, .. } => {
+                    if let Some(selected_row) = state.selected_row {
+                        let list_len = state.notes_as_list().len();
+                        state.select_row((selected_row.max(1) - 1).min(list_len - 1).max(0));
+                    } else {
+                        state.select_row(0);
+                    }
+                }
+                Input { key: Key::Down, .. } => {
+                    if let Some(selected_row) = state.selected_row {
+                        let list_len = state.notes_as_list().len();
+                        state.select_row((selected_row + 1).min(list_len - 1).max(0));
+                    } else {
+                        state.select_row(0);
+                    }
                 }
                 _ => {}
             },
             Mode::Vote => match input {
-                Input { key: Key::Esc, .. }
-                | Input {
-                    key: Key::Char('c'),
-                    ctrl: true,
-                    ..
-                } => {
-                    mode = Mode::Normal; // Back to normal mode with Esc or Ctrl+C
+                Input { key: Key::Esc, .. } => {
+                    mode = Mode::Normal;
+                    state.deselect_row()
+                }
+                Input { key: Key::Up, .. } => {
+                    if let Some(selected_row) = state.selected_row {
+                        let list_len = state.notes_as_list().len();
+                        state.select_row((selected_row.max(1) - 1).min(list_len - 1).max(0));
+                    } else {
+                        state.select_row(0);
+                    }
+                }
+                Input { key: Key::Down, .. } => {
+                    if let Some(selected_row) = state.selected_row {
+                        let list_len = state.notes_as_list().len();
+                        state.select_row((selected_row + 1).min(list_len - 1).max(0));
+                    } else {
+                        state.select_row(0);
+                    }
                 }
                 _ => {}
             },

@@ -35,8 +35,18 @@ impl Note {
             text: text.clone(),
             author,
             id: text.clone(),
-            sentiment: Sentiment::Neutral,
+            sentiment: Self::get_sentiment(&text),
             votes: 0,
         }
+    }
+
+    fn get_sentiment(text: &String) -> Sentiment {
+        if text.contains(":)") {
+            return Sentiment::Happy;
+        }
+        if text.contains(":(") {
+            return Sentiment::Sad;
+        }
+        Sentiment::Neutral
     }
 }
