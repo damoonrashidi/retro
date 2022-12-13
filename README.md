@@ -15,6 +15,6 @@ cargo run .
     - [ ] support multiple rooms
 - [x] List added notes
 - [x] Select notes with arrow up/down
-- [ ] Vote/unvote for selected note
-- [ ] Group notes
-- [ ] Add emotion to note
+- [x] Vote/unvote for selected note
+- [x] Group notes
+- [x] Add emotion to note
