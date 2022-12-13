@@ -1,12 +1,12 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use crate::note::Note;
+use crate::note::{Note, Sentiment};
 
 pub struct State {
     notes: HashMap<String, Note>,
     pub selected_row: Option<usize>,
     pub participants: Vec<String>,
-    my_votes: Vec<String>,
+    my_votes: HashSet<String>,
 }
 
 impl State {
@@ -15,7 +15,7 @@ impl State {
             notes: HashMap::new(),
             selected_row: None,
             participants: vec![],
-            my_votes: vec![],
+            my_votes: HashSet::new(),
         }
     }
 
@@ -30,16 +30,19 @@ impl State {
     #[allow(unused)]
     pub fn upvote(&mut self, id: String) -> () {
         if let Some(note) = self.notes.get_mut(&id) {
-            note.votes += 1;
-            self.my_votes.push(note.id.clone());
+            if !self.my_votes.contains(&note.id) {
+                note.votes += 1;
+                self.my_votes.insert(note.id.clone());
+            }
         }
     }
 
     #[allow(unused)]
     pub fn downvote(&mut self, id: String) -> () {
         if let Some(note) = self.notes.get_mut(&id) {
-            if self.my_votes.contains(&note.id) {
+            if self.my_votes.contains(&note.id) && note.votes > 0 {
                 note.votes -= 1;
+                self.my_votes.remove(&note.id);
             }
         }
     }
@@ -60,12 +63,34 @@ impl State {
         self.notes.insert(first.id.clone(), merged);
     }
 
+    pub fn remove_note(&mut self, id: &String) {
+        self.notes.remove(id);
+    }
+
     pub fn select_row(&mut self, index: usize) {
         self.selected_row = Some(index);
     }
 
     pub fn deselect_row(&mut self) {
         self.selected_row = None;
+    }
+
+    #[allow(unused)]
+    pub fn sentiment_count(&self) -> [(Sentiment, usize); 3] {
+        let total = self
+            .notes
+            .values()
+            .fold((0, 0, 0), |counts, note| match note.sentiment {
+                Sentiment::Happy => (counts.0 + 1, counts.1, counts.2),
+                Sentiment::Sad => (counts.0, counts.1 + 1, counts.2),
+                Sentiment::Neutral => (counts.0, counts.1, counts.2 + 1),
+            });
+
+        [
+            (Sentiment::Happy, total.0),
+            (Sentiment::Sad, total.1),
+            (Sentiment::Neutral, total.2),
+        ]
     }
 }
 

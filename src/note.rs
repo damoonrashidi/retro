@@ -32,7 +32,7 @@ pub struct Note {
 impl Note {
     pub fn new(author: String, text: String) -> Self {
         Note {
-            text: text.clone(),
+            text: text.clone().replace(":(", "").replace(":)", ""),
             author,
             id: text.clone(),
             sentiment: Self::get_sentiment(&text),

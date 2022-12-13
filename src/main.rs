@@ -205,6 +205,25 @@ fn main() -> io::Result<()> {
                         state.select_row(0);
                     }
                 }
+                Input {
+                    key: Key::Char(chr),
+                    ..
+                } => {
+                    if let Some(index) = state.selected_row {
+                        if ('0'..='9').contains(&chr) {
+                            let notes = state.notes_as_list();
+                            let selected_id = notes.get(index).unwrap().id.clone();
+                            let merge_id = notes
+                                .get(chr.to_string().parse::<usize>().unwrap())
+                                .unwrap()
+                                .clone()
+                                .id
+                                .clone();
+                            state.group_notes(&merge_id, &selected_id);
+                            state.remove_note(&selected_id);
+                        }
+                    }
+                }
                 _ => {}
             },
             Mode::Vote => match input {
@@ -234,6 +253,15 @@ fn main() -> io::Result<()> {
                     if let Some(index) = state.selected_row {
                         let note_id = state.notes_as_list().get(index).unwrap().id.clone();
                         state.upvote(note_id);
+                    }
+                }
+                Input {
+                    key: Key::Backspace,
+                    ..
+                } => {
+                    if let Some(index) = state.selected_row {
+                        let note_id = state.notes_as_list().get(index).unwrap().id.clone();
+                        state.downvote(note_id);
                     }
                 }
                 _ => {}
@@ -269,7 +297,7 @@ fn build_list_item<'a>(note: &Note, index: &usize, mode: &Mode, is_selected: boo
     };
 
     let votes = if note.votes > 0 {
-        format!("+{}", note.votes)
+        format!(" [+{}]", note.votes)
     } else {
         "".to_string()
     };
