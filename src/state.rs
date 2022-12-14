@@ -23,12 +23,12 @@ impl State {
         self.notes.values().cloned().collect()
     }
 
-    pub fn add_note(&mut self, note: Note) -> () {
+    pub fn add_note(&mut self, note: Note) {
         self.notes.insert(note.id.clone(), note);
     }
 
     #[allow(unused)]
-    pub fn upvote(&mut self, id: String) -> () {
+    pub fn upvote(&mut self, id: String) {
         if let Some(note) = self.notes.get_mut(&id) {
             if !self.my_votes.contains(&note.id) {
                 note.votes += 1;
@@ -38,7 +38,7 @@ impl State {
     }
 
     #[allow(unused)]
-    pub fn downvote(&mut self, id: String) -> () {
+    pub fn downvote(&mut self, id: String) {
         if let Some(note) = self.notes.get_mut(&id) {
             if self.my_votes.contains(&note.id) && note.votes > 0 {
                 note.votes -= 1;
@@ -48,19 +48,26 @@ impl State {
     }
 
     #[allow(unused)]
-    pub fn group_notes(&mut self, id1: &String, id2: &String) -> () {
-        let first = self.notes.get(id1).unwrap();
-        let second = self.notes.get(id2).unwrap();
+    pub fn group_notes(&mut self, id1: &String, id2: &String) -> Result<Note, &str> {
+        if (id1 == id2) {
+            return Err("");
+        }
 
-        let merged = Note {
-            author: "Multiple authors".into(),
-            text: format!("{}\n{}", first.text, second.text),
-            id: first.id.clone(),
-            sentiment: crate::note::Sentiment::Neutral,
-            votes: first.votes + second.votes,
-        };
+        if let (Some(first), Some(second)) = (self.notes.get(id1), self.notes.get(id2)) {
+            let merged = Note {
+                author: "Multiple authors".into(),
+                text: format!("{}\n{}", first.text, second.text),
+                id: first.id.clone(),
+                sentiment: crate::note::Sentiment::Neutral,
+                votes: first.votes + second.votes,
+            };
 
-        self.notes.insert(first.id.clone(), merged);
+            self.notes.insert(first.id.clone(), merged);
+
+            return Ok(merged.clone());
+        }
+
+        Err("No")
     }
 
     pub fn remove_note(&mut self, id: &String) {

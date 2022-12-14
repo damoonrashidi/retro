@@ -40,13 +40,19 @@ fn main() -> io::Result<()> {
                 .notes_as_list()
                 .into_iter()
                 .enumerate()
-                .map(|(i, note)| {
+                .flat_map(|(i, note)| {
                     if let Some(selected_row) = state.selected_row {
                         if i == selected_row && (mode == Mode::Group || mode == Mode::Vote) {
-                            return build_list_item(&note, &i, &mode, selected_row == i);
+                            return vec![
+                                build_list_item(&note, &i, &mode, selected_row == i),
+                                ListItem::new("----------------"),
+                            ];
                         }
                     }
-                    build_list_item(&note, &i, &mode, false)
+                    vec![
+                        build_list_item(&note, &i, &mode, false),
+                        ListItem::new("----------------"),
+                    ]
                 })
                 .collect::<Vec<ListItem>>(),
         )
