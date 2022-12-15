@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 #[allow(unused)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Sentiment {
     Happy,
     Sad,
@@ -32,7 +32,7 @@ pub struct Note {
 impl Note {
     pub fn new(author: String, text: String) -> Self {
         Note {
-            text: text.clone().replace(":(", "").replace(":)", ""),
+            text: text.replace(":(", "").replace(":)", ""),
             author,
             id: text.clone(),
             sentiment: Self::get_sentiment(&text),
@@ -40,7 +40,7 @@ impl Note {
         }
     }
 
-    fn get_sentiment(text: &String) -> Sentiment {
+    fn get_sentiment(text: &str) -> Sentiment {
         if text.contains(":)") {
             return Sentiment::Happy;
         }

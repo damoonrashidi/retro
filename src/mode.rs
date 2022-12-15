@@ -8,6 +8,7 @@ pub enum Mode {
     Insert,
     Vote,
     Group,
+    Find,
 }
 
 impl Mode {
@@ -17,6 +18,7 @@ impl Mode {
             Self::Insert => (Color::Reset, Color::LightBlue),
             Self::Group => (Color::Reset, Color::LightRed),
             Self::Vote => (Color::Reset, Color::LightGreen),
+            Self::Find => (Color::Reset, Color::LightYellow),
         }
     }
 }
@@ -24,10 +26,11 @@ impl Mode {
 impl fmt::Display for Mode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
-            Self::Normal => write!(f, "NORMAL"),
-            Self::Insert => write!(f, "INSERT"),
-            Self::Group => write!(f, "GROUP"),
-            Self::Vote => write!(f, "VOTE"),
+            Self::Normal => write!(f, "NOR"),
+            Self::Insert => write!(f, "INS"),
+            Self::Group => write!(f, "GRP"),
+            Self::Vote => write!(f, "VOT"),
+            Self::Find => write!(f, "FND"),
         }
     }
 }

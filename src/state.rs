@@ -3,10 +3,13 @@ use std::collections::{HashMap, HashSet};
 use crate::note::{Note, Sentiment};
 
 pub struct State {
-    notes: HashMap<String, Note>,
     pub selected_row: Option<usize>,
     pub participants: Vec<String>,
+    pub filter: Option<Sentiment>,
+
+    notes: HashMap<String, Note>,
     my_votes: HashSet<String>,
+    pub show_help: bool,
 }
 
 impl State {
@@ -16,10 +19,22 @@ impl State {
             selected_row: None,
             participants: vec![],
             my_votes: HashSet::new(),
+            show_help: false,
+            filter: None,
         }
     }
 
     pub fn notes_as_list(&self) -> Vec<Note> {
+        if let Some(filter) = self.filter {
+            return self
+                .notes
+                .values()
+                .cloned()
+                .into_iter()
+                .filter(|note| note.sentiment == filter)
+                .collect();
+        }
+
         self.notes.values().cloned().collect()
     }
 
@@ -27,7 +42,6 @@ impl State {
         self.notes.insert(note.id.clone(), note);
     }
 
-    #[allow(unused)]
     pub fn upvote(&mut self, id: String) {
         if let Some(note) = self.notes.get_mut(&id) {
             if !self.my_votes.contains(&note.id) {
@@ -37,7 +51,6 @@ impl State {
         }
     }
 
-    #[allow(unused)]
     pub fn downvote(&mut self, id: String) {
         if let Some(note) = self.notes.get_mut(&id) {
             if self.my_votes.contains(&note.id) && note.votes > 0 {
@@ -47,9 +60,8 @@ impl State {
         }
     }
 
-    #[allow(unused)]
     pub fn group_notes(&mut self, id1: &String, id2: &String) -> Result<Note, &str> {
-        if (id1 == id2) {
+        if id1 == id2 {
             return Err("");
         }
 
@@ -62,12 +74,20 @@ impl State {
                 votes: first.votes + second.votes,
             };
 
-            self.notes.insert(first.id.clone(), merged);
+            self.notes.insert(first.id.clone(), merged.clone());
 
             return Ok(merged.clone());
         }
 
         Err("No")
+    }
+
+    pub fn set_filter(&mut self, sentiment: Sentiment) {
+        self.filter = Some(sentiment);
+    }
+
+    pub fn reset_filter(&mut self) {
+        self.filter = None;
     }
 
     pub fn remove_note(&mut self, id: &String) {

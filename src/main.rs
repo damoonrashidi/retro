@@ -17,7 +17,7 @@ use tui_textarea::{CursorMove, Input, Key, TextArea};
 
 use crate::cli::RetroArgs;
 use crate::mode::Mode;
-use crate::note::Note;
+use crate::note::{Note, Sentiment};
 use crate::state::State;
 
 fn main() -> io::Result<()> {
@@ -44,7 +44,7 @@ fn main() -> io::Result<()> {
                     if let Some(selected_row) = state.selected_row {
                         if i == selected_row && (mode == Mode::Group || mode == Mode::Vote) {
                             return vec![
-                                build_list_item(&note, &i, &mode, selected_row == i),
+                                build_list_item(&note, &i, &mode, true),
                                 ListItem::new("----------------"),
                             ];
                         }
@@ -54,35 +54,39 @@ fn main() -> io::Result<()> {
                         ListItem::new("----------------"),
                     ]
                 })
-                .collect::<Vec<ListItem>>(),
+                .collect::<Vec<ListItem<'_>>>(),
         )
         .block(Block::default().borders(Borders::ALL).title("Notes"));
 
-        let block = Block::default().borders(Borders::ALL).title("Note");
-        textarea.set_block(block);
-        let (fg, bg) = mode.get_color();
+        textarea.set_block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Note")
+                .style(Style::default().bg(Color::DarkGray).fg(Color::White)),
+        );
 
-        let help_text = Block::default()
-            .title(format!("{}", mode))
-            .style(Style::default().fg(fg).bg(bg));
+        let help_text = {
+            let (fg, bg) = mode.get_color();
+            Block::default()
+                .title(format!("{}", mode))
+                .style(Style::default().fg(fg).bg(bg))
+        };
 
         let room_info = Block::default().title(format!("{} @ {}", args.display_name, args.room));
 
         let participants_info =
             Block::default().title(format!("{} participants", state.participants.len()));
 
-        textarea.set_cursor_style(
-            Style::default()
-                .fg(Color::Reset)
-                .add_modifier(Modifier::REVERSED)
-                .add_modifier(Modifier::RAPID_BLINK),
-        );
-
         let rect = term.size()?;
 
         term.draw(|f| {
-            f.render_widget(textarea.widget(), Rect::new(0, 0, rect.width, 5));
-            f.render_widget(note_list, Rect::new(0, 6, rect.width, rect.height - 7));
+            f.render_widget(note_list, Rect::new(0, 0, rect.width, rect.height - 1));
+            if mode == Mode::Insert {
+                f.render_widget(
+                    textarea.widget(),
+                    Rect::new(rect.width / 2 - 20, rect.height / 2 - 10, 40, 20),
+                );
+            }
             f.render_widget(
                 help_text,
                 Rect::new(0, rect.height - 1, format!("{}", mode).len() as u16, 1),
@@ -95,6 +99,20 @@ fn main() -> io::Result<()> {
                 participants_info,
                 Rect::new(rect.width - 14, rect.height - 1, 14, 1),
             );
+            if let Some(filter) = state.filter {
+                f.render_widget(
+                    Block::default()
+                        .title(filter.to_string())
+                        .style(Style::default().fg(Color::Black).bg(Color::LightGreen)),
+                    Rect::new(rect.width / 2 - 3, rect.height - 1, 7, 1),
+                );
+            }
+            if state.show_help {
+                f.render_widget(
+                    help_box(&mode),
+                    Rect::new(rect.width - 40, rect.height - 20, 35, 15),
+                );
+            }
         })?;
 
         let input = crossterm::event::read()?.into();
@@ -115,6 +133,12 @@ fn main() -> io::Result<()> {
                     state.select_row(0);
                 }
                 Input {
+                    key: Key::Char('f'),
+                    ..
+                } => {
+                    mode = Mode::Find;
+                }
+                Input {
                     key: Key::Char('v'),
                     ..
                 } => {
@@ -122,17 +146,10 @@ fn main() -> io::Result<()> {
                     state.select_row(0);
                 }
                 Input {
-                    key: Key::Enter, ..
+                    key: Key::Char('?'),
+                    ..
                 } => {
-                    if !textarea.is_empty() {
-                        let value = textarea.lines().join("\n");
-                        state.add_note(Note::new(args.display_name.clone(), value.clone()));
-                    }
-                    // @Todo: clear the textarea like a non-idiot
-                    textarea.delete_line_by_head();
-                    textarea.delete_line_by_head();
-                    textarea.delete_line_by_head();
-                    textarea.delete_line_by_head();
+                    state.show_help = !state.show_help;
                 }
                 Input {
                     key: Key::Char('q'),
@@ -141,9 +158,34 @@ fn main() -> io::Result<()> {
 
                 _ => {}
             },
+            Mode::Find => match input {
+                Input { key: Key::Esc, .. } => {
+                    state.reset_filter();
+                    mode = Mode::Normal
+                }
+                Input {
+                    key: Key::Char(')'),
+                    ..
+                } => {
+                    state.set_filter(Sentiment::Happy);
+                }
+                Input {
+                    key: Key::Char('('),
+                    ..
+                } => {
+                    state.set_filter(Sentiment::Sad);
+                }
+                Input {
+                    key: Key::Char('|'),
+                    ..
+                } => {
+                    state.set_filter(Sentiment::Neutral);
+                }
+                _ => {}
+            },
             Mode::Insert => match input {
                 Input { key: Key::Esc, .. } => {
-                    mode = Mode::Normal; // Back to normal mode with Esc or Ctrl+C
+                    mode = Mode::Normal;
                 }
                 Input {
                     key: Key::Backspace,
@@ -158,12 +200,21 @@ fn main() -> io::Result<()> {
                     ..
                 } => textarea.move_cursor(CursorMove::WordBack),
                 Input {
+                    key: Key::Enter, ..
+                } => {
+                    if !textarea.is_empty() {
+                        let value = textarea.lines().join("\n");
+                        state.add_note(Note::new(args.display_name.clone(), value.clone()));
+                    }
+                    textarea.delete_line_by_head();
+                }
+                Input {
                     key: Key::Right,
                     alt: true,
                     ..
                 } => textarea.move_cursor(CursorMove::WordForward),
                 input => {
-                    textarea.input(input); // Use default key mappings in insert mode
+                    textarea.input(input);
                 }
             },
             Mode::Group => match input {
@@ -191,18 +242,16 @@ fn main() -> io::Result<()> {
                     key: Key::Char(chr),
                     ..
                 } => {
-                    if let Some(index) = state.selected_row {
-                        if ('0'..='9').contains(&chr) {
-                            let notes = state.notes_as_list();
-                            let selected_id = notes.get(index).unwrap().id.clone();
-                            let merge_id = notes
-                                .get(chr.to_string().parse::<usize>().unwrap())
-                                .unwrap()
-                                .clone()
-                                .id
-                                .clone();
-                            state.group_notes(&merge_id, &selected_id);
+                    if let (Some(index), true) = (state.selected_row, ('0'..='9').contains(&chr)) {
+                        let notes = state.notes_as_list();
+                        let selected_id = notes.get(index).unwrap().id.clone();
+                        if let Some(merge_note) =
+                            notes.get(chr.to_string().parse::<usize>().unwrap())
+                        {
+                            let merge_id = merge_note.id.clone();
+                            let _ = state.group_notes(&merge_id, &selected_id);
                             state.remove_note(&selected_id);
+                            state.deselect_row();
                         }
                     }
                 }
@@ -285,8 +334,6 @@ fn build_list_item<'a>(note: &Note, index: &usize, mode: &Mode, is_selected: boo
     };
 
     let display = match mode {
-        Mode::Normal => format!("{}: {} {}", note.author, note.text, votes),
-        Mode::Insert => format!("{}: {} {}", note.author, note.text, votes),
         Mode::Vote => format!(
             "{}{}: {} {}",
             if is_selected { ">>" } else { "" },
@@ -306,7 +353,65 @@ fn build_list_item<'a>(note: &Note, index: &usize, mode: &Mode, is_selected: boo
             note.text,
             votes
         ),
+        _ => format!("{}: {} {}", note.author, note.text, votes),
     };
 
     ListItem::new(display).style(style)
+}
+
+fn help_box(mode: &Mode) -> List<'static> {
+    let items: Vec<(&str, &str)> = match mode {
+        Mode::Normal => vec![
+            ("?", "Show/hide Help"),
+            ("-", "-"),
+            ("i", "Insert Mode"),
+            ("g", "Group Mode"),
+            ("v", "Vote Mode"),
+            ("-", "-"),
+            ("q", "Quit retro"),
+        ],
+        Mode::Insert => vec![
+            ("?", "Show/hide Help"),
+            ("ESC", "Normal Mode"),
+            ("↵", "Create note"),
+        ],
+        Mode::Find => vec![
+            ("?", "Show/hide Help"),
+            ("ESC", "Normal Mode"),
+            ("-", "-"),
+            ("(", "Show Happy notes"),
+            (")", "Show Sad notes"),
+            ("|", "Show Neutral notes"),
+        ],
+        Mode::Vote => vec![
+            ("?", "Show/hide Help"),
+            ("ESC", "Normal Mode"),
+            ("-", "-"),
+            ("↑", "Select Previous"),
+            ("↓", "Select next"),
+            ("↵", "Vote up selected"),
+            ("⌫", "Unvote selected"),
+        ],
+        Mode::Group => vec![
+            ("?", "Show/hide Help"),
+            ("ESC", "Normal Mode"),
+            ("-", "-"),
+            ("↑", "Select Previous"),
+            ("↓", "Select next"),
+            ("0..9", "Group selected with number"),
+        ],
+    };
+
+    List::new(
+        items
+            .iter()
+            .map(|(key, description)| ListItem::new(format!("{} - {}", key, description)))
+            .collect::<Vec<ListItem>>(),
+    )
+    .block(
+        Block::default()
+            .title(format!("Help ({mode})"))
+            .borders(Borders::all()),
+    )
+    .style(Style::default().bg(Color::White).fg(Color::Black))
 }
