@@ -331,7 +331,7 @@ fn main() -> io::Result<()> {
 }
 
 fn export_retro(name: &String, notes: &String) -> Result<(), io::Error> {
-    let path = Path::new(name.into());
+    let path = Path::new(name);
     fs::write(path, notes)
 }
 

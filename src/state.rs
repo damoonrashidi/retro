@@ -95,7 +95,7 @@ impl State {
 
             self.notes.insert(first.id.clone(), merged.clone());
 
-            return Ok(merged.clone());
+            return Ok(merged);
         }
 
         Err("No")
@@ -179,5 +179,19 @@ mod tests {
         let inserted = state.notes.get("note-id".into()).unwrap();
 
         assert_eq!(inserted.votes, 4);
+    }
+}
+
+impl Default for State {
+    fn default() -> Self {
+        State {
+            selected_row: None,
+            participants: vec![],
+            filter: None,
+            mode: Mode::Normal,
+            notes: HashMap::new(),
+            my_votes: HashSet::new(),
+            show_help: false,
+        }
     }
 }
