@@ -385,49 +385,50 @@ fn help_box(mode: &Mode) -> Paragraph<'static> {
     let shortcuts: &'static str = match mode {
         Mode::Normal => {
             r#"
-? - Show/hide help
+?  Show/hide help
 ________________
-i - insert mode
-g - group mode
-v - vote mode
+i  insert mode
+g  group mode
+v  vote mode
 ________________
-q - quit retro
+e  export to csv
+q  quit retro
 "#
         }
         Mode::Insert => {
             r#"
- ?  - Show/hide help
-ESC - Normal mode
+ ?   Show/hide help
+ESC  Normal mode
 ________________
-↵  - Create note
+↵    Create note
 "#
         }
         Mode::Find => {
             r#"
- ?  - Show/hide help
-ESC - Normal mode
+ ?   Show/hide help
+ESC  Normal mode
 ________________
- )  - Show happy notes 
- (  - Show sad notes 
- |  - Show neutral notes 
+ )   Show happy notes 
+ (   Show sad notes 
+ |   Show neutral notes 
 "#
         }
         Mode::Vote => {
             r#"
- ?  - Show/hide help
-ESC - Normal mode
+ ?   Show/hide help
+ESC  Normal mode
 ________________
- ↑ - Select Previous
- ↓ - Select next
- ↵ - Vote up selected
- ⌫  - Unvote selected
+ ↑   Select Previous
+ ↓   Select next
+ ↵   Vote up selected
+ ⌫   Unvote selected
 "#
         }
 
         Mode::Group => {
             r#"
- ?  - Show/hide help
-ESC - Normal mode
+ ?   Show/hide help
+ESC  Normal mode
 ________________
  ↑   Select Previous
  ↓   Select next
