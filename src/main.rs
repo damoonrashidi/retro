@@ -1,24 +1,18 @@
-mod cli;
-mod mode;
-mod note;
-mod state;
-
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
+use retro::cli::RetroArgs;
+use retro::mode::Mode;
+use retro::note::{Note, Sentiment};
+use retro::state::State;
 use std::io;
 use tui::backend::CrosstermBackend;
 use tui::layout::Rect;
 use tui::style::{Color, Modifier, Style};
-use tui::widgets::{Block, Borders, List, ListItem};
+use tui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use tui::Terminal;
 use tui_textarea::{CursorMove, Input, Key, TextArea};
-
-use crate::cli::RetroArgs;
-use crate::mode::Mode;
-use crate::note::{Note, Sentiment};
-use crate::state::State;
 
 fn main() -> io::Result<()> {
     let stdout = io::stdout();
@@ -136,7 +130,7 @@ fn main() -> io::Result<()> {
                     key: Key::Char('f'),
                     ..
                 } => {
-                    mode = Mode::Find;
+                    mode = Mode::Filter;
                 }
                 Input {
                     key: Key::Char('v'),
@@ -158,7 +152,7 @@ fn main() -> io::Result<()> {
 
                 _ => {}
             },
-            Mode::Find => match input {
+            Mode::Filter => match input {
                 Input { key: Key::Esc, .. } => {
                     state.reset_filter();
                     mode = Mode::Normal
@@ -359,59 +353,66 @@ fn build_list_item<'a>(note: &Note, index: &usize, mode: &Mode, is_selected: boo
     ListItem::new(display).style(style)
 }
 
-fn help_box(mode: &Mode) -> List<'static> {
-    let items: Vec<(&str, &str)> = match mode {
-        Mode::Normal => vec![
-            ("?", "Show/hide Help"),
-            ("-", "-"),
-            ("i", "Insert Mode"),
-            ("g", "Group Mode"),
-            ("v", "Vote Mode"),
-            ("-", "-"),
-            ("q", "Quit retro"),
-        ],
-        Mode::Insert => vec![
-            ("?", "Show/hide Help"),
-            ("ESC", "Normal Mode"),
-            ("↵", "Create note"),
-        ],
-        Mode::Find => vec![
-            ("?", "Show/hide Help"),
-            ("ESC", "Normal Mode"),
-            ("-", "-"),
-            ("(", "Show Happy notes"),
-            (")", "Show Sad notes"),
-            ("|", "Show Neutral notes"),
-        ],
-        Mode::Vote => vec![
-            ("?", "Show/hide Help"),
-            ("ESC", "Normal Mode"),
-            ("-", "-"),
-            ("↑", "Select Previous"),
-            ("↓", "Select next"),
-            ("↵", "Vote up selected"),
-            ("⌫", "Unvote selected"),
-        ],
-        Mode::Group => vec![
-            ("?", "Show/hide Help"),
-            ("ESC", "Normal Mode"),
-            ("-", "-"),
-            ("↑", "Select Previous"),
-            ("↓", "Select next"),
-            ("0..9", "Group selected with number"),
-        ],
+fn help_box(mode: &Mode) -> Paragraph<'static> {
+    let shortcuts: &'static str = match mode {
+        Mode::Normal => {
+            r#"
+? - Show/hide help
+________________
+i - insert mode
+g - group mode
+v - vote mode
+________________
+q - quit retro
+"#
+        }
+        Mode::Insert => {
+            r#"
+ ?  - Show/hide help
+ESC - Normal mode
+________________
+↵  - Create note
+"#
+        }
+        Mode::Filter => {
+            r#"
+ ?  - Show/hide help
+ESC - Normal mode
+________________
+ )  - Show happy notes 
+ (  - Show sad notes 
+ |  - Show neutral notes 
+"#
+        }
+        Mode::Vote => {
+            r#"
+ ?  - Show/hide help
+ESC - Normal mode
+________________
+ ↑ - Select Previous
+ ↓ - Select next
+ ↵ - Vote up selected
+ ⌫  - Unvote selected
+"#
+        }
+
+        Mode::Group => {
+            r#"
+ ?  - Show/hide help
+ESC - Normal mode
+________________
+ ↑   Select Previous
+ ↓   Select next
+0..9  Group selected with number
+"#
+        }
     };
 
-    List::new(
-        items
-            .iter()
-            .map(|(key, description)| ListItem::new(format!("{} - {}", key, description)))
-            .collect::<Vec<ListItem>>(),
-    )
-    .block(
-        Block::default()
-            .title(format!("Help ({mode})"))
-            .borders(Borders::all()),
-    )
-    .style(Style::default().bg(Color::White).fg(Color::Black))
+    Paragraph::new(shortcuts)
+        .block(
+            Block::default()
+                .title(format!("Help ({mode})"))
+                .borders(Borders::all()),
+        )
+        .style(Style::default().bg(Color::White).fg(Color::Black))
 }

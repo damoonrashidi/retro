@@ -1,20 +1,39 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::note::{Note, Sentiment};
+use crate::{
+    mode::Mode,
+    note::{Note, Sentiment},
+};
 
+/// Application state
+#[derive(Debug)]
 pub struct State {
+    /// what row is selected (used by the vote/group modes)
     pub selected_row: Option<usize>,
+
+    /// List of participants (display_names)
     pub participants: Vec<String>,
+
+    /// if in filter mode display only the notes matching this filter
     pub filter: Option<Sentiment>,
 
+    /// Active mode
+    pub mode: Mode,
+
+    /// List of all notes, by any author
     notes: HashMap<String, Note>,
+
+    // A set of ids for the notes the current user has voted for
     my_votes: HashSet<String>,
+
+    /// If true, a box with a list of shorcuts for the active mode will be shown
     pub show_help: bool,
 }
 
 impl State {
     pub fn new() -> Self {
         State {
+            mode: Mode::Normal,
             notes: HashMap::new(),
             selected_row: None,
             participants: vec![],
