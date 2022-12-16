@@ -6,7 +6,8 @@ use retro::cli::RetroArgs;
 use retro::mode::Mode;
 use retro::note::{Note, Sentiment};
 use retro::state::State;
-use std::io;
+use std::path::Path;
+use std::{fs, io};
 use tui::backend::CrosstermBackend;
 use tui::layout::Rect;
 use tui::style::{Color, Modifier, Style};
@@ -25,7 +26,6 @@ fn main() -> io::Result<()> {
     let mut term = Terminal::new(backend)?;
 
     let mut textarea = TextArea::default();
-    let mut mode = Mode::Normal;
     let mut state = State::new();
 
     loop {
@@ -36,15 +36,17 @@ fn main() -> io::Result<()> {
                 .enumerate()
                 .flat_map(|(i, note)| {
                     if let Some(selected_row) = state.selected_row {
-                        if i == selected_row && (mode == Mode::Group || mode == Mode::Vote) {
+                        if i == selected_row
+                            && (state.mode == Mode::Group || state.mode == Mode::Vote)
+                        {
                             return vec![
-                                build_list_item(&note, &i, &mode, true),
+                                build_list_item(&note, &i, &state.mode, true),
                                 ListItem::new("----------------"),
                             ];
                         }
                     }
                     vec![
-                        build_list_item(&note, &i, &mode, false),
+                        build_list_item(&note, &i, &state.mode, false),
                         ListItem::new("----------------"),
                     ]
                 })
@@ -60,9 +62,9 @@ fn main() -> io::Result<()> {
         );
 
         let help_text = {
-            let (fg, bg) = mode.get_color();
+            let (fg, bg) = state.mode.get_color();
             Block::default()
-                .title(format!("{}", mode))
+                .title(format!("{}", state.mode))
                 .style(Style::default().fg(fg).bg(bg))
         };
 
@@ -75,7 +77,7 @@ fn main() -> io::Result<()> {
 
         term.draw(|f| {
             f.render_widget(note_list, Rect::new(0, 0, rect.width, rect.height - 1));
-            if mode == Mode::Insert {
+            if state.mode == Mode::Insert {
                 f.render_widget(
                     textarea.widget(),
                     Rect::new(rect.width / 2 - 20, rect.height / 2 - 10, 40, 20),
@@ -83,11 +85,21 @@ fn main() -> io::Result<()> {
             }
             f.render_widget(
                 help_text,
-                Rect::new(0, rect.height - 1, format!("{}", mode).len() as u16, 1),
+                Rect::new(
+                    0,
+                    rect.height - 1,
+                    format!("{}", state.mode).len() as u16,
+                    1,
+                ),
             );
             f.render_widget(
                 room_info,
-                Rect::new(format!("{}", mode).len() as u16 + 1, rect.height - 1, 50, 1),
+                Rect::new(
+                    format!("{}", state.mode).len() as u16 + 1,
+                    rect.height - 1,
+                    50,
+                    1,
+                ),
             );
             f.render_widget(
                 participants_info,
@@ -103,7 +115,7 @@ fn main() -> io::Result<()> {
             }
             if state.show_help {
                 f.render_widget(
-                    help_box(&mode),
+                    help_box(&state.mode),
                     Rect::new(rect.width - 40, rect.height - 20, 35, 15),
                 );
             }
@@ -111,33 +123,46 @@ fn main() -> io::Result<()> {
 
         let input = crossterm::event::read()?.into();
 
-        match mode {
+        match state.mode {
             Mode::Normal => match input {
                 Input {
                     key: Key::Char('i'),
                     ..
                 } => {
-                    mode = Mode::Insert;
+                    state.mode = Mode::Insert;
                 }
                 Input {
                     key: Key::Char('g'),
                     ..
                 } => {
-                    mode = Mode::Group;
+                    state.mode = Mode::Group;
                     state.select_row(0);
                 }
                 Input {
                     key: Key::Char('f'),
                     ..
                 } => {
-                    mode = Mode::Filter;
+                    state.mode = Mode::Find;
                 }
                 Input {
                     key: Key::Char('v'),
                     ..
                 } => {
-                    mode = Mode::Vote;
+                    state.mode = Mode::Vote;
                     state.select_row(0);
+                }
+                Input {
+                    key: Key::Char('e'),
+                    ..
+                } => {
+                    let notes = state
+                        .notes_as_list()
+                        .iter()
+                        .map(|note| format!("{},{},{}", note.author, note.sentiment, note.text))
+                        .collect::<Vec<String>>()
+                        .join("\n");
+
+                    let _ = export_retro(&format!("{}.csv", &args.room), &notes);
                 }
                 Input {
                     key: Key::Char('?'),
@@ -152,10 +177,10 @@ fn main() -> io::Result<()> {
 
                 _ => {}
             },
-            Mode::Filter => match input {
+            Mode::Find => match input {
                 Input { key: Key::Esc, .. } => {
                     state.reset_filter();
-                    mode = Mode::Normal
+                    state.mode = Mode::Normal
                 }
                 Input {
                     key: Key::Char(')'),
@@ -179,7 +204,7 @@ fn main() -> io::Result<()> {
             },
             Mode::Insert => match input {
                 Input { key: Key::Esc, .. } => {
-                    mode = Mode::Normal;
+                    state.mode = Mode::Normal;
                 }
                 Input {
                     key: Key::Backspace,
@@ -213,7 +238,7 @@ fn main() -> io::Result<()> {
             },
             Mode::Group => match input {
                 Input { key: Key::Esc, .. } => {
-                    mode = Mode::Normal;
+                    state.mode = Mode::Normal;
                     state.deselect_row()
                 }
                 Input { key: Key::Up, .. } => {
@@ -253,7 +278,7 @@ fn main() -> io::Result<()> {
             },
             Mode::Vote => match input {
                 Input { key: Key::Esc, .. } => {
-                    mode = Mode::Normal;
+                    state.mode = Mode::Normal;
                     state.deselect_row()
                 }
                 Input { key: Key::Up, .. } => {
@@ -302,9 +327,12 @@ fn main() -> io::Result<()> {
     )?;
     term.show_cursor()?;
 
-    println!("Lines: {:?}", textarea.lines());
-
     Ok(())
+}
+
+fn export_retro(name: &String, notes: &String) -> Result<(), io::Error> {
+    let path = Path::new(name.into());
+    fs::write(path, notes)
 }
 
 fn build_list_item<'a>(note: &Note, index: &usize, mode: &Mode, is_selected: bool) -> ListItem<'a> {
@@ -374,7 +402,7 @@ ________________
 ↵  - Create note
 "#
         }
-        Mode::Filter => {
+        Mode::Find => {
             r#"
  ?  - Show/hide help
 ESC - Normal mode

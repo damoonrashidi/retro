@@ -18,7 +18,7 @@ pub enum Mode {
     Group,
 
     /// Filter notes based on sentiment
-    Filter,
+    Find,
 }
 
 impl Mode {
@@ -29,7 +29,7 @@ impl Mode {
             Self::Insert => (Color::Reset, Color::LightBlue),
             Self::Group => (Color::Reset, Color::LightRed),
             Self::Vote => (Color::Reset, Color::LightGreen),
-            Self::Filter => (Color::Reset, Color::LightYellow),
+            Self::Find => (Color::Reset, Color::LightYellow),
         }
     }
 }
@@ -37,11 +37,11 @@ impl Mode {
 impl fmt::Display for Mode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
-            Self::Normal => write!(f, "NOR"),
-            Self::Insert => write!(f, "INS"),
-            Self::Group => write!(f, "GRP"),
-            Self::Vote => write!(f, "VOT"),
-            Self::Filter => write!(f, "FND"),
+            Self::Normal => write!(f, " NOR "),
+            Self::Insert => write!(f, " INS "),
+            Self::Group => write!(f, " GRP "),
+            Self::Vote => write!(f, " VOT "),
+            Self::Find => write!(f, " FND "),
         }
     }
 }
