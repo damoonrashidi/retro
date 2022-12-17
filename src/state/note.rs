@@ -67,3 +67,9 @@ impl Note {
         Sentiment::Neutral
     }
 }
+
+impl Display for Note {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.author, self.text)
+    }
+}

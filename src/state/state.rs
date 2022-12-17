@@ -1,8 +1,12 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::mpsc::Sender,
+};
 
 use crate::{
-    mode::Mode,
-    note::{Note, Sentiment},
+    network::actions::NetworkAction,
+    state::mode::Mode,
+    state::note::{Note, Sentiment},
 };
 
 /// Application state
@@ -28,10 +32,12 @@ pub struct State {
 
     /// If true, a box with a list of shorcuts for the active mode will be shown
     pub show_help: bool,
+
+    sender: Sender<NetworkAction>,
 }
 
 impl State {
-    pub fn new() -> Self {
+    pub fn new(sender: Sender<NetworkAction>) -> Self {
         State {
             mode: Mode::Normal,
             notes: HashMap::new(),
@@ -40,6 +46,7 @@ impl State {
             my_votes: HashSet::new(),
             show_help: false,
             filter: None,
+            sender,
         }
     }
 
@@ -57,8 +64,14 @@ impl State {
         self.notes.values().cloned().collect()
     }
 
+    pub fn dispatch(&mut self, action: NetworkAction) {
+        if let Err(e) = self.sender.send(action) {
+            println!("{}", e);
+        }
+    }
+
     pub fn add_note(&mut self, note: Note) {
-        self.notes.insert(note.id.clone(), note);
+        self.dispatch(NetworkAction::PublishNote(note));
     }
 
     pub fn upvote(&mut self, id: String) {
@@ -89,7 +102,7 @@ impl State {
                 author: "Multiple authors".into(),
                 text: format!("{}\n{}", first.text, second.text),
                 id: first.id.clone(),
-                sentiment: crate::note::Sentiment::Neutral,
+                sentiment: crate::state::note::Sentiment::Neutral,
                 votes: first.votes + second.votes,
             };
 
@@ -140,48 +153,6 @@ impl State {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::note::Note;
-
-    use super::State;
-
-    #[test]
-    fn test_add_note() {
-        let mut state = State::new();
-        state.add_note(Note::new("test note".into(), "note-id".into()));
-
-        let inserted = state.notes.get("note-id".into()).unwrap();
-        assert_eq!(inserted.text, String::from("test note"));
-    }
-
-    #[test]
-    fn test_vote_up() {
-        let mut state = State::new();
-        state.add_note(Note::new("test note".into(), "note-id".into()));
-        state.upvote(String::from("note-id"));
-        let inserted = state.notes.get("note-id".into()).unwrap();
-
-        assert_eq!(inserted.votes, 1);
-    }
-
-    #[test]
-    fn test_vote_down() {
-        let mut state = State::new();
-        state.add_note(Note {
-            id: "id".to_string(),
-            text: "text".to_string(),
-            author: "Retro Guy".to_string(),
-            sentiment: crate::note::Sentiment::Happy,
-            votes: 5,
-        });
-        state.downvote("id".to_string());
-        let inserted = state.notes.get("note-id".into()).unwrap();
-
-        assert_eq!(inserted.votes, 4);
-    }
-}
-
 impl Default for State {
     fn default() -> Self {
         State {
@@ -192,6 +163,7 @@ impl Default for State {
             notes: HashMap::new(),
             my_votes: HashSet::new(),
             show_help: false,
+            sender: std::sync::mpsc::channel::<NetworkAction>().0,
         }
     }
 }

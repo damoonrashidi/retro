@@ -1,6 +1,6 @@
 use clap::Parser;
 
-#[derive(Parser, Debug, Default)]
+#[derive(Parser, Debug, Default, Clone)]
 /// Retro is a CLI tool to host and and run retros
 #[command(author, version, about, long_about = None)]
 pub struct RetroArgs {
