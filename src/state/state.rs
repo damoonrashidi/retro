@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::mpsc::Sender,
-};
+use std::{collections::HashSet, sync::mpsc::Sender};
 
 use crate::{
     network::actions::NetworkAction,
@@ -25,7 +22,7 @@ pub struct State {
     pub mode: Mode,
 
     /// List of all notes, by any author
-    notes: HashMap<String, Note>,
+    pub notes: Vec<Note>,
 
     // A set of ids for the notes the current user has voted for
     my_votes: HashSet<String>,
@@ -40,7 +37,7 @@ impl State {
     pub fn new(sender: Sender<NetworkAction>) -> Self {
         State {
             mode: Mode::Normal,
-            notes: HashMap::new(),
+            notes: vec![],
             selected_row: None,
             participants: vec![],
             my_votes: HashSet::new(),
@@ -48,20 +45,6 @@ impl State {
             filter: None,
             sender,
         }
-    }
-
-    pub fn notes_as_list(&self) -> Vec<Note> {
-        if let Some(filter) = self.filter {
-            return self
-                .notes
-                .values()
-                .cloned()
-                .into_iter()
-                .filter(|note| note.sentiment == filter)
-                .collect();
-        }
-
-        self.notes.values().cloned().collect()
     }
 
     pub fn dispatch(&mut self, action: NetworkAction) {
@@ -74,41 +57,27 @@ impl State {
         self.dispatch(NetworkAction::PublishNote(note));
     }
 
-    pub fn upvote(&mut self, id: String) {
-        if let Some(note) = self.notes.get_mut(&id) {
-            if !self.my_votes.contains(&note.id) {
-                note.votes += 1;
-                self.my_votes.insert(note.id.clone());
-            }
+    pub fn set_notes(&mut self, notes: Vec<Note>) {
+        self.notes = notes;
+    }
+
+    pub fn upvote(&mut self, id: &String) {
+        if !self.my_votes.contains(id) {
+            self.my_votes.insert(id.clone());
+            self.dispatch(NetworkAction::Unvote(id.clone()));
         }
     }
 
-    pub fn downvote(&mut self, id: String) {
-        if let Some(note) = self.notes.get_mut(&id) {
-            if self.my_votes.contains(&note.id) && note.votes > 0 {
-                note.votes -= 1;
-                self.my_votes.remove(&note.id);
-            }
+    pub fn downvote(&mut self, id: &String) {
+        if self.my_votes.contains(id) {
+            self.my_votes.remove(id);
+            self.dispatch(NetworkAction::Unvote(id.clone()));
         }
     }
 
     pub fn group_notes(&mut self, id1: &String, id2: &String) -> Result<Note, &str> {
         if id1 == id2 {
             return Err("");
-        }
-
-        if let (Some(first), Some(second)) = (self.notes.get(id1), self.notes.get(id2)) {
-            let merged = Note {
-                author: "Multiple authors".into(),
-                text: format!("{}\n{}", first.text, second.text),
-                id: first.id.clone(),
-                sentiment: crate::state::note::Sentiment::Neutral,
-                votes: first.votes + second.votes,
-            };
-
-            self.notes.insert(first.id.clone(), merged.clone());
-
-            return Ok(merged);
         }
 
         Err("No")
@@ -123,7 +92,7 @@ impl State {
     }
 
     pub fn remove_note(&mut self, id: &String) {
-        self.notes.remove(id);
+        println!("{}", id);
     }
 
     pub fn select_row(&mut self, index: usize) {
@@ -138,7 +107,7 @@ impl State {
     pub fn sentiment_count(&self) -> [(Sentiment, usize); 3] {
         let total = self
             .notes
-            .values()
+            .iter()
             .fold((0, 0, 0), |counts, note| match note.sentiment {
                 Sentiment::Happy => (counts.0 + 1, counts.1, counts.2),
                 Sentiment::Sad => (counts.0, counts.1 + 1, counts.2),
@@ -160,7 +129,7 @@ impl Default for State {
             participants: vec![],
             filter: None,
             mode: Mode::Normal,
-            notes: HashMap::new(),
+            notes: vec![],
             my_votes: HashSet::new(),
             show_help: false,
             sender: std::sync::mpsc::channel::<NetworkAction>().0,

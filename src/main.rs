@@ -16,7 +16,7 @@ use retro::state::mode::Mode;
 use retro::state::state::State;
 use tui::backend::CrosstermBackend;
 use tui::layout::Rect;
-use tui::widgets::{Block, Borders};
+use tui::widgets::{Block, Borders, List, ListItem, ListState};
 use tui::Terminal;
 use tui_textarea::{Input, Key};
 
@@ -37,7 +37,7 @@ async fn main() -> Result<()> {
     let cloned_state = Arc::clone(&state);
     let cloned_args = args.clone();
     std::thread::spawn(move || {
-        let mut network = Network::new(&cloned_args.room);
+        let mut network = Network::new(&cloned_args.room, &state);
         start_tokio(sync_io_rx, &mut network);
     });
 
@@ -70,12 +70,18 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     loop {
+        let size = terminal.size()?;
         let mut state = state.lock().unwrap();
+
+        let items: Vec<ListItem> = state
+            .notes
+            .iter()
+            .map(|note| ListItem::new(note.to_string()))
+            .collect();
+        let list = List::new(items).block(Block::default().borders(Borders::all()));
+        let mut list_state = ListState::default();
         terminal.draw(|ui| {
-            ui.render_widget(
-                Block::default().title("title").borders(Borders::all()),
-                Rect::new(10, 10, 10, 5),
-            );
+            ui.render_stateful_widget(list, Rect::new(0, 5, size.width - 1, 5), &mut list_state);
         })?;
 
         let input: Input = crossterm::event::read()?.into();
@@ -88,6 +94,14 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
                 } => {
                     quit()?;
                     return Ok(());
+                }
+                Input { key: Key::Down, .. } => {
+                    let row = match state.selected_row {
+                        Some(row) => row + 1,
+                        _ => 0,
+                    };
+
+                    list_state.select(Some(row))
                 }
                 Input {
                     key: Key::Char('g'),

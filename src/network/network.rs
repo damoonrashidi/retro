@@ -1,4 +1,12 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
+
+use crate::state::{
+    note::{Note, Sentiment},
+    state::State,
+};
 
 use super::actions::NetworkAction;
 use anyhow::Result;
@@ -10,21 +18,23 @@ use firestore_grpc::{
     },
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Network<'a> {
     project_id: &'static str,
 
-    #[allow(unused)]
     room_id: &'a String,
+
+    pub state: &'a Arc<Mutex<State>>,
 }
 
 impl<'a> Network<'a> {
-    pub fn new(room_id: &'a String) -> Self {
+    pub fn new(room_id: &'a String, state: &'a Arc<Mutex<State>>) -> Self {
         let project_id = "retrodog-23512";
 
         Network {
             project_id,
             room_id,
+            state,
         }
     }
 
@@ -41,36 +51,63 @@ impl<'a> Network<'a> {
         }
     }
 
-    pub async fn get_notes(&self) -> Result<()> {
-        let (root, mut client) = self.get_client().await?;
+    pub async fn create_note(&self, note: &'a Note) -> Result<&Note> {
+        let mut fields = HashMap::new();
 
-        let mut note = HashMap::new();
-        note.insert(
+        fields.insert(
             "author".into(),
             Value {
-                value_type: Some(ValueType::StringValue("damoon".into())),
+                value_type: Some(ValueType::StringValue(note.author.clone())),
             },
         );
 
-        let update = client
+        fields.insert(
+            "text".into(),
+            Value {
+                value_type: Some(ValueType::StringValue(note.text.clone())),
+            },
+        );
+
+        fields.insert(
+            "sentiment".into(),
+            Value {
+                value_type: Some(ValueType::StringValue(note.sentiment.into())),
+            },
+        );
+
+        fields.insert(
+            "votes".into(),
+            Value {
+                value_type: Some(ValueType::IntegerValue(note.votes.into())),
+            },
+        );
+
+        let (root, mut client) = self.get_client().await?;
+
+        client
             .create_document(CreateDocumentRequest {
                 parent: format!("{}", root),
                 collection_id: "notes".into(),
                 document_id: "".into(),
                 document: Some(firestore_grpc::v1::Document {
                     name: "".into(),
-                    fields: note,
+                    fields,
                     create_time: None,
                     update_time: None,
                 }),
                 mask: None,
             })
-            .await;
-        println!("{:?}", update);
+            .await?;
+
+        Ok(note)
+    }
+
+    pub async fn get_notes(&self) -> Result<()> {
+        let (root, mut client) = self.get_client().await?;
 
         let res = client
             .list_documents(ListDocumentsRequest {
-                parent: format!("{}/notes", root),
+                parent: root,
                 consistency_selector: None,
                 mask: None,
                 collection_id: "notes".into(),
@@ -79,9 +116,41 @@ impl<'a> Network<'a> {
                 order_by: "author".into(),
                 show_missing: false,
             })
-            .await;
+            .await?;
 
-        println!("{:?}", res);
+        let notes: Vec<Note> = res
+            .into_inner()
+            .documents
+            .iter()
+            .map(|doc| {
+                let id: String = doc.name.clone();
+
+                let author = match doc.fields.get("author").unwrap().value_type.clone() {
+                    Some(ValueType::StringValue(author)) => author.clone(),
+                    _ => "".into(),
+                };
+
+                let text = match doc.fields.get("text").unwrap().value_type.clone() {
+                    Some(ValueType::StringValue(text)) => text.clone(),
+                    _ => "".into(),
+                };
+
+                Note {
+                    id,
+                    text,
+                    author,
+                    sentiment: Sentiment::Neutral,
+                    votes: 0,
+                }
+            })
+            .collect();
+
+        let mut state = match self.state.lock() {
+            Ok(state) => state,
+            Err(_) => panic!("oh no!"),
+        };
+
+        state.set_notes(notes);
 
         Ok(())
     }

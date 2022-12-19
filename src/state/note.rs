@@ -26,6 +26,12 @@ impl Display for Sentiment {
     }
 }
 
+impl From<Sentiment> for String {
+    fn from(sentiment: Sentiment) -> Self {
+        format!("{}", sentiment)
+    }
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 /// A retro Note
 pub struct Note {
