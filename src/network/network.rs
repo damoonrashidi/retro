@@ -1,8 +1,13 @@
+use std::collections::HashMap;
+
 use super::actions::NetworkAction;
 use anyhow::Result;
 use firestore_grpc::{
     tonic::transport::Channel,
-    v1::{firestore_client::FirestoreClient, ListDocumentsRequest},
+    v1::{
+        firestore_client::FirestoreClient, value::ValueType, CreateDocumentRequest,
+        ListDocumentsRequest, Value,
+    },
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -37,11 +42,33 @@ impl<'a> Network<'a> {
     }
 
     pub async fn get_notes(&self) -> Result<()> {
-        println!("setting up db connection");
-
         let (root, mut client) = self.get_client().await?;
 
-        match client
+        let mut note = HashMap::new();
+        note.insert(
+            "author".into(),
+            Value {
+                value_type: Some(ValueType::StringValue("damoon".into())),
+            },
+        );
+
+        let update = client
+            .create_document(CreateDocumentRequest {
+                parent: format!("{}", root),
+                collection_id: "notes".into(),
+                document_id: "".into(),
+                document: Some(firestore_grpc::v1::Document {
+                    name: "".into(),
+                    fields: note,
+                    create_time: None,
+                    update_time: None,
+                }),
+                mask: None,
+            })
+            .await;
+        println!("{:?}", update);
+
+        let res = client
             .list_documents(ListDocumentsRequest {
                 parent: format!("{}/notes", root),
                 consistency_selector: None,
@@ -52,15 +79,9 @@ impl<'a> Network<'a> {
                 order_by: "author".into(),
                 show_missing: false,
             })
-            .await
-        {
-            Ok(res) => {
-                println!("{:?}", res);
-            }
-            Err(err) => {
-                println!("{:?}", err);
-            }
-        };
+            .await;
+
+        println!("{:?}", res);
 
         Ok(())
     }
@@ -68,7 +89,7 @@ impl<'a> Network<'a> {
     async fn get_client(&self) -> Result<(String, FirestoreClient<Channel>)> {
         let service = FirestoreClient::connect("https://firestore.googleapis.com").await?;
         let root = format!(
-            "projects/{}/databases/(default)/documents/{}",
+            "projects/{}/databases/(default)/documents/retros/{}",
             self.project_id, self.room_id
         );
 
