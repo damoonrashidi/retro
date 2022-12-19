@@ -23,13 +23,13 @@ pub enum Mode {
 
 impl Mode {
     /// Get the highlight color for the note
-    pub fn get_color(&self) -> (Color, Color) {
+    pub fn get_color(&self) -> Color {
         match self {
-            Self::Normal => (Color::Reset, Color::Reset),
-            Self::Insert => (Color::Reset, Color::LightBlue),
-            Self::Group => (Color::Reset, Color::LightRed),
-            Self::Vote => (Color::Reset, Color::LightGreen),
-            Self::Find => (Color::Reset, Color::LightYellow),
+            Self::Normal => Color::White,
+            Self::Insert => Color::Blue,
+            Self::Group => Color::Red,
+            Self::Vote => Color::Green,
+            Self::Find => Color::Yellow,
         }
     }
 }

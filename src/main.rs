@@ -16,6 +16,7 @@ use retro::handlers::handle_input;
 use retro::network::actions::NetworkAction;
 use retro::network::network::Network;
 use retro::ui::notes_list::notes_list;
+use retro::ui::status_bar::status_bar;
 use tui::backend::CrosstermBackend;
 use tui::layout::Rect;
 use tui::Terminal;
@@ -75,10 +76,14 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
         let mut state = state.lock().unwrap();
 
         terminal.draw(|ui| {
+            // Notes list
             ui.render_widget(
                 notes_list(&state),
                 Rect::new(0, 0, size.width, size.height - 1),
             );
+
+            // Mode info
+            ui.render_widget(status_bar(&state), Rect::new(0, size.height - 1, 5, 1));
         })?;
 
         let input: Input = crossterm::event::read()?.into();
