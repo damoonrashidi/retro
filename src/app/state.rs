@@ -1,9 +1,9 @@
 use std::{collections::HashSet, sync::mpsc::Sender};
 
 use crate::{
+    app::mode::Mode,
+    app::note::{Note, Sentiment},
     network::actions::NetworkAction,
-    state::mode::Mode,
-    state::note::{Note, Sentiment},
 };
 
 /// Application state

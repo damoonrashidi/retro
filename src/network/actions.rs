@@ -1,4 +1,4 @@
-use crate::state::note::Note;
+use crate::app::note::Note;
 
 #[derive(Debug, Clone)]
 pub enum NetworkAction {

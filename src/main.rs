@@ -9,14 +9,15 @@ use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
 };
 use crossterm::{execute, ExecutableCommand};
+use retro::app::mode::Mode;
+use retro::app::state::State;
 use retro::cli::RetroArgs;
+use retro::handlers::handle_input;
 use retro::network::actions::NetworkAction;
 use retro::network::network::Network;
-use retro::state::mode::Mode;
-use retro::state::state::State;
+use retro::ui::notes_list::notes_list;
 use tui::backend::CrosstermBackend;
 use tui::layout::Rect;
-use tui::widgets::{Block, Borders, List, ListItem, ListState};
 use tui::Terminal;
 use tui_textarea::{Input, Key};
 
@@ -73,15 +74,11 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
         let size = terminal.size()?;
         let mut state = state.lock().unwrap();
 
-        let items: Vec<ListItem> = state
-            .notes
-            .iter()
-            .map(|note| ListItem::new(note.to_string()))
-            .collect();
-        let list = List::new(items).block(Block::default().borders(Borders::all()));
-        let mut list_state = ListState::default();
         terminal.draw(|ui| {
-            ui.render_stateful_widget(list, Rect::new(0, 5, size.width - 1, 5), &mut list_state);
+            ui.render_widget(
+                notes_list(&state),
+                Rect::new(0, 0, size.width, size.height - 1),
+            );
         })?;
 
         let input: Input = crossterm::event::read()?.into();
@@ -95,20 +92,9 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
                     quit()?;
                     return Ok(());
                 }
-                Input { key: Key::Down, .. } => {
-                    let row = match state.selected_row {
-                        Some(row) => row + 1,
-                        _ => 0,
-                    };
-
-                    list_state.select(Some(row))
-                }
-                Input {
-                    key: Key::Char('g'),
-                    ..
-                } => state.dispatch(NetworkAction::GetNotes),
                 _ => {}
             }
         }
+        handle_input(&input, &mut state);
     }
 }

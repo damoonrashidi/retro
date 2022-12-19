@@ -2,7 +2,7 @@
 #![warn(rust_2018_idioms)]
 #![deny(
     dead_code,
-    // unused_variables,
+    unused_variables,
     unused_imports,
     // missing_docs,
     unused_import_braces,
@@ -15,11 +15,13 @@
 /// CLI param parsing
 pub mod cli;
 
-/// State
-pub mod state;
+/// App
+pub mod app;
 
 /// Networking capabilities
 pub mod network;
 
 /// All UI components
 pub mod ui;
+
+pub mod handlers;

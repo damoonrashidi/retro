@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::state::{
+use crate::app::{
     note::{Note, Sentiment},
     state::State,
 };
