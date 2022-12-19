@@ -1,8 +1,9 @@
-use crate::state::note::Note;
-
 use super::actions::NetworkAction;
 use anyhow::Result;
-use firestore::FirestoreDb;
+use firestore_grpc::{
+    tonic::transport::Channel,
+    v1::{firestore_client::FirestoreClient, ListDocumentsRequest},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Network<'a> {
@@ -38,13 +39,39 @@ impl<'a> Network<'a> {
     pub async fn get_notes(&self) -> Result<()> {
         println!("setting up db connection");
 
-        let db = FirestoreDb::new(self.project_id).await?;
+        let (root, mut client) = self.get_client().await?;
 
-        println!("{:?}, \n...getting notes", db);
-        let retros: Vec<Note> = db.fluent().select().from("retros").obj().query().await?;
-
-        println!("notes: {:?}", retros);
+        match client
+            .list_documents(ListDocumentsRequest {
+                parent: format!("{}/notes", root),
+                consistency_selector: None,
+                mask: None,
+                collection_id: "notes".into(),
+                page_size: 10,
+                page_token: "".into(),
+                order_by: "author".into(),
+                show_missing: false,
+            })
+            .await
+        {
+            Ok(res) => {
+                println!("{:?}", res);
+            }
+            Err(err) => {
+                println!("{:?}", err);
+            }
+        };
 
         Ok(())
+    }
+
+    async fn get_client(&self) -> Result<(String, FirestoreClient<Channel>)> {
+        let service = FirestoreClient::connect("https://firestore.googleapis.com").await?;
+        let root = format!(
+            "projects/{}/databases/(default)/documents/{}",
+            self.project_id, self.room_id
+        );
+
+        Ok((root, service))
     }
 }

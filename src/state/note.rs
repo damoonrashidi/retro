@@ -6,8 +6,10 @@ use std::fmt::Display;
 pub enum Sentiment {
     /// Positive (or continue doing)
     Happy,
+
     /// Negative (or stop doing)
     Sad,
+
     /// Neutral (no opinion)
     Neutral,
 }
@@ -29,6 +31,7 @@ impl Display for Sentiment {
 pub struct Note {
     /// Used for storing notes
     pub id: String,
+
     /// The actual text of the note
     pub text: String,
 
