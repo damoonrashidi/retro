@@ -8,7 +8,7 @@ pub mod help_handler;
 pub mod mode_handler;
 pub mod vote_handler;
 
-pub fn handle_input(input: &Input, state: &mut State) -> () {
+pub fn handle_input(input: &Input, state: &mut State) {
     handle_show_help(input, state);
     handle_vote(input, state);
     handle_mode(input, state);

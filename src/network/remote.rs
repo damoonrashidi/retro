@@ -19,7 +19,7 @@ use firestore_grpc::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Network<'a> {
+pub struct Remote<'a> {
     project_id: &'static str,
 
     room_id: &'a String,
@@ -27,11 +27,11 @@ pub struct Network<'a> {
     pub state: &'a Arc<Mutex<State>>,
 }
 
-impl<'a> Network<'a> {
+impl<'a> Remote<'a> {
     pub fn new(room_id: &'a String, state: &'a Arc<Mutex<State>>) -> Self {
         let project_id = "retrodog-23512";
 
-        Network {
+        Remote {
             project_id,
             room_id,
             state,
@@ -86,7 +86,7 @@ impl<'a> Network<'a> {
 
         client
             .create_document(CreateDocumentRequest {
-                parent: format!("{}", root),
+                parent: root.to_string(),
                 collection_id: "notes".into(),
                 document_id: "".into(),
                 document: Some(firestore_grpc::v1::Document {
@@ -126,12 +126,12 @@ impl<'a> Network<'a> {
                 let id: String = doc.name.clone();
 
                 let author = match doc.fields.get("author").unwrap().value_type.clone() {
-                    Some(ValueType::StringValue(author)) => author.clone(),
+                    Some(ValueType::StringValue(author)) => author,
                     _ => "".into(),
                 };
 
                 let text = match doc.fields.get("text").unwrap().value_type.clone() {
-                    Some(ValueType::StringValue(text)) => text.clone(),
+                    Some(ValueType::StringValue(text)) => text,
                     _ => "".into(),
                 };
 
@@ -150,7 +150,16 @@ impl<'a> Network<'a> {
             Err(_) => panic!("oh no!"),
         };
 
-        state.set_notes(notes);
+        if let Some(sentiment) = state.filter {
+            state.set_notes(
+                notes
+                    .into_iter()
+                    .filter(|note| note.sentiment == sentiment)
+                    .collect(),
+            );
+        } else {
+            state.set_notes(notes);
+        }
 
         Ok(())
     }

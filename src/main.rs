@@ -14,7 +14,7 @@ use retro::app::state::State;
 use retro::cli::RetroArgs;
 use retro::handlers::handle_input;
 use retro::network::actions::NetworkAction;
-use retro::network::network::Network;
+use retro::network::remote::Remote;
 use retro::ui::notes_list::notes_list;
 use retro::ui::status_bar::status_bar;
 use tui::backend::CrosstermBackend;
@@ -23,7 +23,7 @@ use tui::Terminal;
 use tui_textarea::{Input, Key};
 
 #[tokio::main]
-async fn start_tokio<'a>(io_rx: Receiver<NetworkAction>, network: &mut Network) {
+async fn start_tokio<'a>(io_rx: Receiver<NetworkAction>, network: &mut Remote) {
     while let Ok(event) = io_rx.recv() {
         network.handle_event(event).await;
     }
@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
     let cloned_state = Arc::clone(&state);
     let cloned_args = args.clone();
     std::thread::spawn(move || {
-        let mut network = Network::new(&cloned_args.room, &state);
+        let mut network = Remote::new(&cloned_args.room, &state);
         start_tokio(sync_io_rx, &mut network);
     });
 
