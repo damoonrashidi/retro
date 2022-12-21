@@ -14,9 +14,8 @@ use firestore_grpc::{
         firestore_client::FirestoreClient,
         listen_request::TargetChange,
         target::{DocumentsTarget, TargetType},
-        value::ValueType,
         CreateDocumentRequest, Document, ListDocumentsRequest, ListenRequest, Target,
-        UpdateDocumentRequest, Value,
+        UpdateDocumentRequest,
     },
 };
 
@@ -155,21 +154,18 @@ impl<'a> Remote<'a> {
     }
 
     async fn upvote(&self, note: &Note) -> Result<()> {
-        let (root, mut client, _) = self.get_client().await?;
+        let (_root, mut client, _) = self.get_client().await?;
 
-        let mut votes = HashMap::new();
-        votes.insert(
-            "votes".to_string(),
-            Value {
-                value_type: Some(ValueType::IntegerValue(note.votes as i64 + 1)),
-            },
-        );
+        let changed = &Note {
+            votes: note.votes + 1,
+            ..note.clone()
+        };
 
         client
             .update_document(UpdateDocumentRequest {
                 document: Some(Document {
-                    name: format!("{root}/notes/{}", note.id),
-                    fields: votes,
+                    name: note.id.clone(),
+                    fields: changed.into(),
                     create_time: None,
                     update_time: None,
                 }),
