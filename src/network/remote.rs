@@ -14,8 +14,9 @@ use firestore_grpc::{
         firestore_client::FirestoreClient,
         listen_request::TargetChange,
         target::{DocumentsTarget, TargetType},
+        value::ValueType,
         CreateDocumentRequest, Document, ListDocumentsRequest, ListenRequest, Target,
-        UpdateDocumentRequest,
+        UpdateDocumentRequest, Value,
     },
 };
 
@@ -142,7 +143,11 @@ impl<'a> Remote<'a> {
             .into_inner()
             .documents
             .into_iter()
-            .map(|note| note.fields.into())
+            .map(|note| {
+                let mut converted: Note = note.fields.into();
+                converted.id = note.name;
+                converted
+            })
             .collect();
 
         let mut state = self.state.lock().expect("oh no");
@@ -154,11 +159,19 @@ impl<'a> Remote<'a> {
     async fn upvote(&self, note: &Note) -> Result<()> {
         let (root, mut client, _) = self.get_client().await?;
 
+        let mut votes = HashMap::new();
+        votes.insert(
+            "votes".to_string(),
+            Value {
+                value_type: Some(ValueType::IntegerValue(note.votes as i64 + 1)),
+            },
+        );
+
         client
             .update_document(UpdateDocumentRequest {
                 document: Some(Document {
                     name: format!("{root}/notes/{}", note.id),
-                    fields: note.into(),
+                    fields: votes,
                     create_time: None,
                     update_time: None,
                 }),

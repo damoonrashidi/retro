@@ -97,28 +97,28 @@ impl Into<HashMap<String, Value>> for &Note {
         let mut fields = HashMap::new();
 
         fields.insert(
-            "author".into(),
+            "author".to_string(),
             Value {
                 value_type: Some(ValueType::StringValue(self.author.clone())),
             },
         );
 
         fields.insert(
-            "text".into(),
+            "text".to_string(),
             Value {
                 value_type: Some(ValueType::StringValue(self.text.clone())),
             },
         );
 
         fields.insert(
-            "sentiment".into(),
+            "sentiment".to_string(),
             Value {
                 value_type: Some(ValueType::StringValue(self.sentiment.into())),
             },
         );
 
         fields.insert(
-            "votes".into(),
+            "votes".to_string(),
             Value {
                 value_type: Some(ValueType::IntegerValue(self.votes.into())),
             },
