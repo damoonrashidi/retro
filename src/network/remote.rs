@@ -87,8 +87,6 @@ impl<'a> Remote<'a> {
     async fn detect_changes(&self) -> Result<()> {
         let (room, mut client, db) = self.get_client().await?;
 
-        let notes_collection = format!("{room}");
-
         let req = ListenRequest {
             database: db.clone(),
             labels: HashMap::new(),
@@ -96,7 +94,7 @@ impl<'a> Remote<'a> {
                 target_id: 0x52757374,
                 once: false,
                 target_type: Some(TargetType::Documents(DocumentsTarget {
-                    documents: vec![notes_collection],
+                    documents: vec![room],
                 })),
                 resume_type: None,
             })),
@@ -112,7 +110,7 @@ impl<'a> Remote<'a> {
         let mut res = client.listen(req).await?.into_inner();
 
         while let Some(msg) = res.next().await {
-            if let Ok(_) = msg {
+            if msg.is_ok() {
                 let mut state = self.state.lock().expect("oh no");
                 state.dispatch(NetworkAction::GetNotes);
                 state.dispatch(NetworkAction::ListenForChanges);

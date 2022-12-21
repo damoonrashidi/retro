@@ -1,7 +1,7 @@
 use tui_textarea::{Input, Key};
 
 use crate::{
-    app::{mode::Mode, state::State},
+    app::{mode::Mode, note::Note, state::State},
     network::actions::NetworkAction,
 };
 
@@ -32,7 +32,7 @@ pub fn handle_vote(input: &Input, state: &mut State) {
         } => {
             if let Some(index) = state.selected_row {
                 if let Some(note) = &state.notes.clone().get(index) {
-                    state.dispatch(NetworkAction::Vote(note.clone().to_owned()))
+                    state.dispatch(NetworkAction::Vote(Note::clone(note)))
                 }
             }
         }
@@ -43,7 +43,7 @@ pub fn handle_vote(input: &Input, state: &mut State) {
         } => {
             if let Some(index) = state.selected_row {
                 if let Some(note) = &state.notes.clone().get(index) {
-                    state.dispatch(NetworkAction::Unvote(note.clone().to_owned()))
+                    state.dispatch(NetworkAction::Unvote(Note::clone(note)))
                 }
             }
         }
