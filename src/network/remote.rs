@@ -3,20 +3,23 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::app::{
-    note::{Note, Sentiment},
-    state::State,
-};
+use crate::app::{note::Note, state::State};
 
 use super::actions::NetworkAction;
 use anyhow::Result;
+
 use firestore_grpc::{
-    tonic::transport::Channel,
+    tonic::{metadata::MetadataValue, transport::Channel, Request},
     v1::{
-        firestore_client::FirestoreClient, value::ValueType, CreateDocumentRequest,
-        ListDocumentsRequest, Value,
+        firestore_client::FirestoreClient,
+        listen_request::TargetChange,
+        target::{DocumentsTarget, TargetType},
+        CreateDocumentRequest, Document, ListDocumentsRequest, ListenRequest, Target,
+        UpdateDocumentRequest,
     },
 };
+
+use futures::{stream, StreamExt};
 
 #[derive(Debug, Clone)]
 pub struct Remote<'a> {
@@ -38,51 +41,29 @@ impl<'a> Remote<'a> {
         }
     }
 
-    pub async fn handle_event(&self, action: NetworkAction) {
+    pub async fn handle_event(&self, action: NetworkAction) -> Result<()> {
         match action {
-            NetworkAction::JoinRetro(room_id) => println!("{}", room_id),
-            NetworkAction::PublishNote(note) => println!("{}", note),
-            NetworkAction::Vote(note_id) => println!("{}", note_id),
-            NetworkAction::Unvote(note_id) => println!("{}", note_id),
-            NetworkAction::Group(id1, id2) => println!("{}{}", id1, id2),
+            NetworkAction::JoinRetro(room_id) => println!("join {}", room_id),
+            NetworkAction::PublishNote(note) => {
+                self.create_note(&note).await?;
+            }
+            NetworkAction::Vote(note) => {
+                self.upvote(&note).await?;
+            }
+            NetworkAction::Unvote(note_id) => println!("unvote {}", note_id),
+            NetworkAction::Group(id1, id2) => println!("group {}{}", id1, id2),
             NetworkAction::GetNotes => {
-                let _ = self.get_notes().await;
+                self.get_notes().await?;
+            }
+            NetworkAction::ListenForChanges => {
+                self.detect_changes().await?;
             }
         }
+        Ok(())
     }
 
-    pub async fn create_note(&self, note: &'a Note) -> Result<&Note> {
-        let mut fields = HashMap::new();
-
-        fields.insert(
-            "author".into(),
-            Value {
-                value_type: Some(ValueType::StringValue(note.author.clone())),
-            },
-        );
-
-        fields.insert(
-            "text".into(),
-            Value {
-                value_type: Some(ValueType::StringValue(note.text.clone())),
-            },
-        );
-
-        fields.insert(
-            "sentiment".into(),
-            Value {
-                value_type: Some(ValueType::StringValue(note.sentiment.into())),
-            },
-        );
-
-        fields.insert(
-            "votes".into(),
-            Value {
-                value_type: Some(ValueType::IntegerValue(note.votes.into())),
-            },
-        );
-
-        let (root, mut client) = self.get_client().await?;
+    async fn create_note(&self, note: &'a Note) -> Result<&Note> {
+        let (root, mut client, _) = self.get_client().await?;
 
         client
             .create_document(CreateDocumentRequest {
@@ -91,7 +72,7 @@ impl<'a> Remote<'a> {
                 document_id: "".into(),
                 document: Some(firestore_grpc::v1::Document {
                     name: "".into(),
-                    fields,
+                    fields: note.into(),
                     create_time: None,
                     update_time: None,
                 }),
@@ -102,75 +83,100 @@ impl<'a> Remote<'a> {
         Ok(note)
     }
 
-    pub async fn get_notes(&self) -> Result<()> {
-        let (root, mut client) = self.get_client().await?;
+    async fn detect_changes(&self) -> Result<()> {
+        let (room, mut client, db) = self.get_client().await?;
+
+        let notes_collection = format!("{room}");
+
+        let req = ListenRequest {
+            database: db.clone(),
+            labels: HashMap::new(),
+            target_change: Some(TargetChange::AddTarget(Target {
+                target_id: 0x52757374,
+                once: false,
+                target_type: Some(TargetType::Documents(DocumentsTarget {
+                    documents: vec![notes_collection],
+                })),
+                resume_type: None,
+            })),
+        };
+
+        let mut req = Request::new(stream::iter(vec![req]).chain(stream::pending()));
+        let metadata = req.metadata_mut();
+        metadata.insert(
+            "google-cloud-resource-prefix",
+            MetadataValue::from_str(&db).unwrap(),
+        );
+
+        let mut res = client.listen(req).await?.into_inner();
+
+        while let Some(msg) = res.next().await {
+            if let Ok(_) = msg {
+                let mut state = self.state.lock().expect("oh no");
+                state.dispatch(NetworkAction::GetNotes);
+                state.dispatch(NetworkAction::ListenForChanges);
+                break;
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn get_notes(&self) -> Result<()> {
+        let (root, mut client, _db) = self.get_client().await?;
 
         let res = client
             .list_documents(ListDocumentsRequest {
                 parent: root,
-                consistency_selector: None,
+                collection_id: "notes".to_string(),
+                page_size: 1000,
+                page_token: "".to_string(),
+                order_by: "author".to_string(),
                 mask: None,
-                collection_id: "notes".into(),
-                page_size: 10,
-                page_token: "".into(),
-                order_by: "author".into(),
                 show_missing: false,
+                consistency_selector: None,
             })
             .await?;
 
         let notes: Vec<Note> = res
             .into_inner()
             .documents
-            .iter()
-            .map(|doc| {
-                let id: String = doc.name.clone();
-
-                let author = match doc.fields.get("author").unwrap().value_type.clone() {
-                    Some(ValueType::StringValue(author)) => author,
-                    _ => "".into(),
-                };
-
-                let text = match doc.fields.get("text").unwrap().value_type.clone() {
-                    Some(ValueType::StringValue(text)) => text,
-                    _ => "".into(),
-                };
-
-                Note {
-                    id,
-                    text,
-                    author,
-                    sentiment: Sentiment::Neutral,
-                    votes: 0,
-                }
-            })
+            .into_iter()
+            .map(|note| note.fields.into())
             .collect();
 
-        let mut state = match self.state.lock() {
-            Ok(state) => state,
-            Err(_) => panic!("oh no!"),
-        };
-
-        if let Some(sentiment) = state.filter {
-            state.set_notes(
-                notes
-                    .into_iter()
-                    .filter(|note| note.sentiment == sentiment)
-                    .collect(),
-            );
-        } else {
-            state.set_notes(notes);
-        }
+        let mut state = self.state.lock().expect("oh no");
+        state.set_notes(notes);
 
         Ok(())
     }
 
-    async fn get_client(&self) -> Result<(String, FirestoreClient<Channel>)> {
-        let service = FirestoreClient::connect("https://firestore.googleapis.com").await?;
-        let root = format!(
-            "projects/{}/databases/(default)/documents/retros/{}",
-            self.project_id, self.room_id
-        );
+    async fn upvote(&self, note: &Note) -> Result<()> {
+        let (root, mut client, _) = self.get_client().await?;
 
-        Ok((root, service))
+        client
+            .update_document(UpdateDocumentRequest {
+                document: Some(Document {
+                    name: format!("{root}/notes/{}", note.id),
+                    fields: note.into(),
+                    create_time: None,
+                    update_time: None,
+                }),
+                update_mask: None,
+                mask: None,
+                current_document: None,
+            })
+            .await?;
+
+        Ok(())
+    }
+
+    async fn get_client(&self) -> Result<(String, FirestoreClient<Channel>, String)> {
+        let db = format!("projects/{}/databases/(default)", self.project_id);
+        let room = format!("{db}/documents/retros/{}", self.room_id);
+
+        let service = FirestoreClient::connect("https://firestore.googleapis.com").await?;
+
+        Ok((room, service, db))
     }
 }

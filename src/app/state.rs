@@ -49,7 +49,7 @@ impl State {
 
     pub fn dispatch(&mut self, action: NetworkAction) {
         if let Err(e) = self.sender.send(action) {
-            println!("{}", e);
+            println!("error {}", e);
         }
     }
 
@@ -61,17 +61,17 @@ impl State {
         self.notes = notes;
     }
 
-    pub fn upvote(&mut self, id: &String) {
-        if !self.my_votes.contains(id) {
-            self.my_votes.insert(id.clone());
-            self.dispatch(NetworkAction::Unvote(id.clone()));
+    pub fn upvote(&mut self, note: &Note) {
+        if !self.my_votes.contains(&note.id) {
+            self.dispatch(NetworkAction::Vote(note.clone()));
+            self.my_votes.insert(note.id.clone());
         }
     }
 
-    pub fn downvote(&mut self, id: &String) {
-        if self.my_votes.contains(id) {
-            self.my_votes.remove(id);
-            self.dispatch(NetworkAction::Unvote(id.clone()));
+    pub fn downvote(&mut self, note: &Note) {
+        if self.my_votes.contains(&note.id) {
+            self.dispatch(NetworkAction::Unvote(note.clone()));
+            self.my_votes.remove(&note.id);
         }
     }
 

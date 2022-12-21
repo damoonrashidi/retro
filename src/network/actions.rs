@@ -4,8 +4,9 @@ use crate::app::note::Note;
 pub enum NetworkAction {
     JoinRetro(String),
     PublishNote(Note),
-    Vote(String),
-    Unvote(String),
-    Group(String, String),
+    Vote(Note),
+    Unvote(Note),
+    Group(Note, Note),
     GetNotes,
+    ListenForChanges,
 }

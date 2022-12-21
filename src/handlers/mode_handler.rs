@@ -1,9 +1,6 @@
 use tui_textarea::{Input, Key};
 
-use crate::{
-    app::{mode::Mode, state::State},
-    network::actions::NetworkAction,
-};
+use crate::app::{mode::Mode, state::State};
 
 pub fn handle_mode(input: &Input, state: &mut State) {
     match state.mode {
@@ -30,12 +27,6 @@ pub fn handle_mode(input: &Input, state: &mut State) {
                 key: Key::Char('f'),
                 ..
             } => state.mode = Mode::Find,
-            Input {
-                key: Key::Char('s'),
-                ..
-            } => {
-                state.dispatch(NetworkAction::GetNotes);
-            }
             _ => {}
         },
         _ => {

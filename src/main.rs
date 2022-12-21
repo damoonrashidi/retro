@@ -25,7 +25,7 @@ use tui_textarea::{Input, Key};
 #[tokio::main]
 async fn start_tokio<'a>(io_rx: Receiver<NetworkAction>, network: &mut Remote) {
     while let Ok(event) = io_rx.recv() {
-        network.handle_event(event).await;
+        let _ = network.handle_event(event).await;
     }
 }
 
@@ -35,6 +35,11 @@ async fn main() -> Result<()> {
     let (sync_io_tx, sync_io_rx) = std::sync::mpsc::channel::<NetworkAction>();
 
     let state = Arc::new(Mutex::new(State::new(sync_io_tx)));
+
+    state
+        .lock()
+        .expect("cannot do stuff")
+        .dispatch(NetworkAction::ListenForChanges);
 
     let cloned_state = Arc::clone(&state);
     let cloned_args = args.clone();

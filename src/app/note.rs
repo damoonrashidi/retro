@@ -1,4 +1,6 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
+
+use firestore_grpc::v1::{value::ValueType, Value};
 
 #[allow(unused)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -79,6 +81,80 @@ impl Note {
 
 impl Display for Note {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.author, self.text)
+        let (author, text) = (&self.author, &self.text);
+        let votes = if self.votes > 0 {
+            format!("[+{}]", self.votes)
+        } else {
+            "".to_string()
+        };
+
+        write!(f, "{author}: {text} {votes}",)
+    }
+}
+
+impl Into<HashMap<String, Value>> for &Note {
+    fn into(self) -> HashMap<String, Value> {
+        let mut fields = HashMap::new();
+
+        fields.insert(
+            "author".into(),
+            Value {
+                value_type: Some(ValueType::StringValue(self.author.clone())),
+            },
+        );
+
+        fields.insert(
+            "text".into(),
+            Value {
+                value_type: Some(ValueType::StringValue(self.text.clone())),
+            },
+        );
+
+        fields.insert(
+            "sentiment".into(),
+            Value {
+                value_type: Some(ValueType::StringValue(self.sentiment.into())),
+            },
+        );
+
+        fields.insert(
+            "votes".into(),
+            Value {
+                value_type: Some(ValueType::IntegerValue(self.votes.into())),
+            },
+        );
+
+        fields
+    }
+}
+
+impl From<HashMap<String, Value>> for Note {
+    fn from(values: HashMap<String, Value>) -> Self {
+        let id = String::from("id");
+
+        let text: String = match values.get("text").unwrap().value_type.clone().unwrap() {
+            ValueType::StringValue(text) => text,
+            _ => "".to_string(),
+        };
+
+        let author: String = match values.get("author").unwrap().value_type.clone().unwrap() {
+            ValueType::StringValue(author) => author,
+            _ => "".to_string(),
+        };
+
+        let votes: u8 = match values.get("votes").unwrap().value_type.clone().unwrap() {
+            ValueType::IntegerValue(votes) => votes as u8,
+            _ => 0,
+        };
+
+        let sentiment = Sentiment::Happy;
+
+        Note {
+            id,
+            text,
+            author,
+            sentiment,
+            votes,
+        }
     }
 }
