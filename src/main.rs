@@ -9,14 +9,14 @@ use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
 };
 use crossterm::{execute, ExecutableCommand};
-use retro::app::mode::Mode;
-use retro::app::state::State;
-use retro::cli::RetroArgs;
-use retro::handlers::handle_input;
-use retro::network::actions::NetworkAction;
-use retro::network::remote::Remote;
-use retro::ui::notes_list::notes_list;
-use retro::ui::status_bar::status_bar;
+use retro::ui::help::help;
+use retro::{
+    app::{mode::Mode, state::State},
+    cli::RetroArgs,
+    handlers::handle_input,
+    network::{actions::NetworkAction, remote::Remote},
+    ui::{notes_list::notes_list, status_bar::status_bar},
+};
 use tui::backend::CrosstermBackend;
 use tui::layout::Rect;
 use tui::Terminal;
@@ -89,6 +89,18 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
 
             // Mode info
             ui.render_widget(status_bar(&state), Rect::new(0, size.height - 1, 5, 1));
+
+            if state.show_help {
+                ui.render_widget(
+                    help(&state),
+                    Rect::new(
+                        size.width - size.width / 3 - 4,
+                        size.height - 15,
+                        size.width / 3,
+                        12,
+                    ),
+                );
+            }
         })?;
 
         let input: Input = crossterm::event::read()?.into();
