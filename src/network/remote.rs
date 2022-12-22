@@ -129,7 +129,7 @@ impl<'a> Remote<'a> {
                 collection_id: "notes".to_string(),
                 page_size: 1000,
                 page_token: "".to_string(),
-                order_by: "author".to_string(),
+                order_by: "votes".to_string(),
                 mask: None,
                 show_missing: false,
                 consistency_selector: None,
@@ -140,6 +140,7 @@ impl<'a> Remote<'a> {
             .into_inner()
             .documents
             .into_iter()
+            .rev()
             .map(|note| {
                 let mut converted: Note = note.fields.into();
                 converted.id = note.name;

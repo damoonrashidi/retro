@@ -3,6 +3,7 @@ use std::{collections::HashSet, sync::mpsc::Sender};
 use crate::{
     app::mode::Mode,
     app::note::{Note, Sentiment},
+    cli::RetroArgs,
     network::actions::NetworkAction,
 };
 
@@ -30,11 +31,14 @@ pub struct State {
     /// If true, a box with a list of shorcuts for the active mode will be shown
     pub show_help: bool,
 
+    /// Display name of the current user
+    pub display_name: String,
+
     sender: Sender<NetworkAction>,
 }
 
 impl State {
-    pub fn new(sender: Sender<NetworkAction>) -> Self {
+    pub fn new(sender: Sender<NetworkAction>, args: RetroArgs) -> Self {
         State {
             mode: Mode::Normal,
             notes: vec![],
@@ -44,6 +48,7 @@ impl State {
             show_help: false,
             filter: None,
             sender,
+            display_name: args.display_name,
         }
     }
 
@@ -59,6 +64,7 @@ impl State {
 
     pub fn set_notes(&mut self, notes: Vec<Note>) {
         self.notes = notes;
+        self.selected_row = Some(0);
     }
 
     pub fn upvote(&mut self, note: &Note) {
@@ -133,6 +139,7 @@ impl Default for State {
             my_votes: HashSet::new(),
             show_help: false,
             sender: std::sync::mpsc::channel::<NetworkAction>().0,
+            display_name: "".to_string(),
         }
     }
 }

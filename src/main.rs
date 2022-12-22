@@ -1,4 +1,6 @@
+use core::panic::PanicInfo;
 use std::io::stdout;
+use std::panic;
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
 
@@ -9,7 +11,9 @@ use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
 };
 use crossterm::{execute, ExecutableCommand};
+
 use retro::ui::help::help;
+use retro::ui::new_note::new_note;
 use retro::{
     app::{mode::Mode, state::State},
     cli::RetroArgs,
@@ -31,10 +35,14 @@ async fn start_tokio<'a>(io_rx: Receiver<NetworkAction>, network: &mut Remote) {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    panic::set_hook(Box::new(|info| {
+        panic_hook(info);
+    }));
+
     let args = RetroArgs::new();
     let (sync_io_tx, sync_io_rx) = std::sync::mpsc::channel::<NetworkAction>();
 
-    let state = Arc::new(Mutex::new(State::new(sync_io_tx)));
+    let state = Arc::new(Mutex::new(State::new(sync_io_tx, args.clone())));
 
     state
         .lock()
@@ -66,6 +74,11 @@ fn quit() -> Result<()> {
     Ok(())
 }
 
+fn panic_hook(info: &PanicInfo<'_>) {
+    dbg!(info);
+    let _ = quit();
+}
+
 async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
     let mut stdout = stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -75,10 +88,26 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
     backend.execute(SetTitle(args.room))?;
 
     let mut terminal = Terminal::new(backend)?;
+    let mut textarea = new_note();
 
     loop {
         let size = terminal.size()?;
         let mut state = state.lock().unwrap();
+
+        let input: Input = crossterm::event::read()?.into();
+
+        if state.mode == Mode::Normal {
+            match input {
+                Input {
+                    key: Key::Char('q'),
+                    ..
+                } => {
+                    quit()?;
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
 
         terminal.draw(|ui| {
             // Notes list
@@ -101,22 +130,15 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
                     ),
                 );
             }
-        })?;
 
-        let input: Input = crossterm::event::read()?.into();
+            handle_input(&input, &mut state, &mut textarea);
 
-        if state.mode == Mode::Normal {
-            match input {
-                Input {
-                    key: Key::Char('q'),
-                    ..
-                } => {
-                    quit()?;
-                    return Ok(());
-                }
-                _ => {}
+            if state.mode == Mode::Insert {
+                ui.render_widget(
+                    textarea.widget(),
+                    Rect::new(size.width / 2 - 15, size.height / 4, 30, 5),
+                );
             }
-        }
-        handle_input(&input, &mut state);
+        })?;
     }
 }

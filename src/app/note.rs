@@ -88,7 +88,7 @@ impl Display for Note {
             "".to_string()
         };
 
-        write!(f, "{author}: {text} {votes}",)
+        write!(f, "{:<10}: {text} {votes}", author)
     }
 }
 
