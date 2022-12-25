@@ -290,21 +290,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "firestore-serde"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edf9b8208a741c842a495312ce19008aec404efe603f9f907b017d9895fb8cf3"
-dependencies = [
- "bytes",
- "chrono",
- "googapis",
- "prost",
- "prost-types",
- "serde",
- "serde_bytes",
-]
-
-[[package]]
 name = "firestore_grpc"
 version = "0.141.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -426,17 +411,6 @@ dependencies = [
  "cfg-if",
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
-]
-
-[[package]]
-name = "googapis"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65e3984a414cce451bd6fa931298c2b384924ddc1b6201adec3b0c0c148dabfa"
-dependencies = [
- "prost",
- "prost-types",
- "tonic",
 ]
 
 [[package]]
@@ -1018,10 +992,8 @@ dependencies = [
  "chrono",
  "clap",
  "crossterm",
- "firestore-serde",
  "firestore_grpc",
  "futures",
- "serde",
  "tokio",
  "tui",
  "tui-textarea",
@@ -1134,35 +1106,6 @@ checksum = "0160a13a177a45bfb43ce71c01580998474f556ad854dcbca936dd2841a5c556"
 dependencies = [
  "core-foundation-sys",
  "libc",
-]
-
-[[package]]
-name = "serde"
-version = "1.0.150"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e326c9ec8042f1b5da33252c8a37e9ffbd2c9bef0155215b6e6c80c790e05f91"
-dependencies = [
- "serde_derive",
-]
-
-[[package]]
-name = "serde_bytes"
-version = "0.11.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "718dc5fff5b36f99093fc49b280cfc96ce6fc824317783bff5a1fed0c7a64819"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "serde_derive"
-version = "1.0.150"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42a3df25b0713732468deadad63ab9da1f1fd75a48a15024b50363f128db627e"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]

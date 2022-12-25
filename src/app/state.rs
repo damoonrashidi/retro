@@ -14,7 +14,7 @@ pub struct State {
     pub selected_row: Option<usize>,
 
     /// List of participants (display_names)
-    pub participants: Vec<String>,
+    pub participants: HashSet<String>,
 
     /// if in filter mode display only the notes matching this filter
     pub filter: Option<Sentiment>,
@@ -43,7 +43,7 @@ impl State {
             mode: Mode::Normal,
             notes: vec![],
             selected_row: None,
-            participants: vec![],
+            participants: HashSet::new(),
             my_votes: HashSet::new(),
             show_help: false,
             filter: None,
@@ -64,7 +64,10 @@ impl State {
 
     pub fn set_notes(&mut self, notes: Vec<Note>) {
         self.notes = notes;
-        self.selected_row = Some(0);
+    }
+
+    pub fn set_participants(&mut self, participants: HashSet<String>) {
+        self.participants = participants;
     }
 
     pub fn upvote(&mut self, note: &Note) {
@@ -132,7 +135,7 @@ impl Default for State {
     fn default() -> Self {
         State {
             selected_row: None,
-            participants: vec![],
+            participants: HashSet::new(),
             filter: None,
             mode: Mode::Normal,
             notes: vec![],

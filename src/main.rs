@@ -110,6 +110,8 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
         }
 
         terminal.draw(|ui| {
+            handle_input(&input, &mut state, &mut textarea);
+
             // Notes list
             ui.render_widget(
                 notes_list(&state),
@@ -130,8 +132,6 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
                     ),
                 );
             }
-
-            handle_input(&input, &mut state, &mut textarea);
 
             if state.mode == Mode::Insert {
                 ui.render_widget(

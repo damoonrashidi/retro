@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Display};
 use firestore_grpc::v1::{value::ValueType, Value};
 
 #[allow(unused)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 /// The sentiment for a given note
 pub enum Sentiment {
     /// Positive (or continue doing)
@@ -34,7 +34,7 @@ impl From<Sentiment> for String {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug)]
 /// A retro Note
 pub struct Note {
     /// Used for storing notes

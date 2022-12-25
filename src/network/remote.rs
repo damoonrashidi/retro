@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
 };
 
@@ -148,8 +148,17 @@ impl<'a> Remote<'a> {
             })
             .collect();
 
+        let participants = HashSet::from_iter(
+            notes
+                .iter()
+                .map(|note| &note.author)
+                .cloned()
+                .collect::<Vec<String>>(),
+        );
+
         let mut state = self.state.lock().expect("oh no");
         state.set_notes(notes);
+        state.set_participants(participants);
 
         Ok(())
     }
