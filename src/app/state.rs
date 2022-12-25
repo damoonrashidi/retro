@@ -1,11 +1,8 @@
 use std::{collections::HashSet, sync::mpsc::Sender};
 
-use crate::{
-    app::mode::Mode,
-    app::note::{Note, Sentiment},
-    cli::RetroArgs,
-    network::actions::NetworkAction,
-};
+use crate::{app::mode::Mode, app::note::Note, cli::RetroArgs, network::actions::NetworkAction};
+
+use super::sentiment::Sentiment;
 
 /// Application state
 #[derive(Debug)]

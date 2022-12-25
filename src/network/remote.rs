@@ -82,7 +82,6 @@ impl<'a> Remote<'a> {
 
         Ok(note)
     }
-
     async fn detect_changes(&self) -> Result<()> {
         let (room, mut client, db) = self.get_client().await?;
 

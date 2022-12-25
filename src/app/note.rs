@@ -2,37 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use firestore_grpc::v1::{value::ValueType, Value};
 
-#[allow(unused)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-/// The sentiment for a given note
-pub enum Sentiment {
-    /// Positive (or continue doing)
-    Happy,
-
-    /// Negative (or stop doing)
-    Sad,
-
-    /// Neutral (no opinion)
-    Neutral,
-}
-
-impl Display for Sentiment {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let rep = match self {
-            Sentiment::Happy => ":)",
-            Sentiment::Sad => ":(",
-            Sentiment::Neutral => ":|",
-        };
-
-        write!(f, "{}", rep)
-    }
-}
-
-impl From<Sentiment> for String {
-    fn from(sentiment: Sentiment) -> Self {
-        format!("{}", sentiment)
-    }
-}
+use super::sentiment::Sentiment;
 
 #[derive(Clone, Debug)]
 /// A retro Note
@@ -92,6 +62,7 @@ impl Display for Note {
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<HashMap<String, Value>> for &Note {
     fn into(self) -> HashMap<String, Value> {
         let mut fields = HashMap::new();

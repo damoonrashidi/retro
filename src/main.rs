@@ -14,6 +14,7 @@ use crossterm::{execute, ExecutableCommand};
 
 use retro::ui::help::help;
 use retro::ui::new_note::new_note;
+use retro::ui::room_info::room_info;
 use retro::{
     app::{mode::Mode, state::State},
     cli::RetroArgs,
@@ -23,11 +24,12 @@ use retro::{
 };
 use tui::backend::CrosstermBackend;
 use tui::layout::Rect;
+use tui::widgets::Paragraph;
 use tui::Terminal;
 use tui_textarea::{Input, Key};
 
 #[tokio::main]
-async fn start_tokio<'a>(io_rx: Receiver<NetworkAction>, network: &mut Remote) {
+async fn start_tokio(io_rx: Receiver<NetworkAction>, network: &mut Remote) {
     while let Ok(event) = io_rx.recv() {
         let _ = network.handle_event(event).await;
     }
@@ -85,7 +87,7 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
     enable_raw_mode()?;
 
     let mut backend = CrosstermBackend::new(stdout);
-    backend.execute(SetTitle(args.room))?;
+    backend.execute(SetTitle(args.room.clone()))?;
 
     let mut terminal = Terminal::new(backend)?;
     let mut textarea = new_note();
@@ -96,17 +98,16 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
 
         let input: Input = crossterm::event::read()?.into();
 
-        if state.mode == Mode::Normal {
-            match input {
-                Input {
-                    key: Key::Char('q'),
-                    ..
-                } => {
-                    quit()?;
-                    return Ok(());
-                }
-                _ => {}
-            }
+        if let (
+            Input {
+                key: Key::Char('q'),
+                ..
+            },
+            Mode::Normal,
+        ) = (&input, &state.mode)
+        {
+            quit()?;
+            return Ok(());
         }
 
         terminal.draw(|ui| {
@@ -120,6 +121,14 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
 
             // Mode info
             ui.render_widget(status_bar(&state), Rect::new(0, size.height - 1, 5, 1));
+            ui.render_widget(
+                room_info(&state.display_name, &args.room),
+                Rect::new(6, size.height - 1, 30, 1),
+            );
+            ui.render_widget(
+                Paragraph::new(format!("{} participants", &state.participants.len())),
+                Rect::new(size.width - 17, size.height - 1, 16, 1),
+            );
 
             if state.show_help {
                 ui.render_widget(
