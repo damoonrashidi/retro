@@ -4,6 +4,7 @@ use crate::{app::mode::Mode, app::note::Note, cli::RetroArgs, network::actions::
 
 use super::sentiment::Sentiment;
 
+#[derive(Clone, Debug)]
 /// Application state
 pub struct State {
     /// what row is selected (used by the vote/group modes)
@@ -34,12 +35,6 @@ pub struct State {
 
     /// Tick count, decides when to redraw the ui
     pub tick_count: usize,
-}
-
-impl Debug for State {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "state")
-    }
 }
 
 impl State {

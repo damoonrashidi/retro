@@ -1,10 +1,10 @@
-use tui_textarea::{Input, Key};
+use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::app::state::State;
 
-pub fn handle_show_help(input: &Input, state: &mut State) {
-    if let Input {
-        key: Key::Char('?'),
+pub fn handle_show_help(input: KeyEvent, state: &mut State) {
+    if let KeyEvent {
+        code: KeyCode::Char('?'),
         ..
     } = input
     {

@@ -159,7 +159,7 @@ async fn start_ui(
                 {
                     return quit();
                 }
-                handle_input(i, state, textarea);
+                handle_input(i, &mut state, textarea);
             }
             Event::Tick => state.tick(),
         }

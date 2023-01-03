@@ -1,13 +1,16 @@
-use tui_textarea::{Input, Key};
+use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::app::{mode::Mode, state::State};
 
-pub fn handle_group(input: &Input, state: &mut State) {
+pub fn handle_group(input: KeyEvent, state: &mut State) {
     if state.mode != Mode::Group {
         return;
     }
     match input {
-        Input { key: Key::Down, .. } => {
+        KeyEvent {
+            code: KeyCode::Down,
+            ..
+        } => {
             let next_row = match state.selected_row {
                 Some(row) => (row + 1).min(state.notes.len()),
                 None => 0,
@@ -15,7 +18,9 @@ pub fn handle_group(input: &Input, state: &mut State) {
             state.select_row(next_row);
         }
 
-        Input { key: Key::Up, .. } => {
+        KeyEvent {
+            code: KeyCode::Up, ..
+        } => {
             let next_row = match state.selected_row {
                 Some(row) => row.max(1) - 1,
                 None => 0,

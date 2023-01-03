@@ -3,7 +3,7 @@ use core::fmt;
 use tui::style::Color;
 
 /// The mode the retro app currently is in
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Mode {
     /// Normal mode
     Normal,
