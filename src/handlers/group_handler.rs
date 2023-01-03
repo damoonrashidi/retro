@@ -9,7 +9,7 @@ pub fn handle_group(input: &Input, state: &mut State) {
     match input {
         Input { key: Key::Down, .. } => {
             let next_row = match state.selected_row {
-                Some(row) => (row + 1).min(state.notes.len() - 1),
+                Some(row) => (row + 1).min(state.notes.len()),
                 None => 0,
             };
             state.select_row(next_row);

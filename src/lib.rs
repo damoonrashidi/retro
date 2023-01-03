@@ -24,4 +24,5 @@ pub mod network;
 /// All UI components
 pub mod ui;
 
+pub mod event;
 pub mod handlers;

@@ -1,36 +1,46 @@
-use tui_textarea::{Input, Key};
+use std::sync::MutexGuard;
+
+use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::app::{mode::Mode, state::State};
 
-pub fn handle_mode(input: &Input, state: &mut State) {
+pub fn handle_mode(input: KeyEvent, mut state: MutexGuard<'_, State>) {
     match state.mode {
         Mode::Normal => match input {
-            Input {
-                key: Key::Char('v'),
+            KeyEvent {
+                code: KeyCode::Char('v'),
                 ..
             } => {
                 state.mode = Mode::Vote;
-                state.select_row(0);
+                if !state.notes.is_empty() {
+                    state.select_row(0);
+                }
             }
-            Input {
-                key: Key::Char('g'),
+
+            KeyEvent {
+                code: KeyCode::Char('g'),
                 ..
             } => {
                 state.mode = Mode::Group;
-                state.select_row(0);
+                if !state.notes.is_empty() {
+                    state.select_row(0);
+                }
             }
-            Input {
-                key: Key::Char('i'),
+            KeyEvent {
+                code: KeyCode::Char('i'),
                 ..
             } => state.mode = Mode::Insert,
-            Input {
-                key: Key::Char('f'),
+            KeyEvent {
+                code: KeyCode::Char('f'),
                 ..
             } => state.mode = Mode::Find,
             _ => {}
         },
         _ => {
-            if let Input { key: Key::Esc, .. } = input {
+            if let KeyEvent {
+                code: KeyCode::Esc, ..
+            } = input
+            {
                 state.mode = Mode::Normal;
                 state.deselect_row();
             }

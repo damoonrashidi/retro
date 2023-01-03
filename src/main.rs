@@ -3,22 +3,23 @@ use std::io::stdout;
 use std::panic;
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use anyhow::Result;
 use crossterm::cursor::RestorePosition;
-use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
+use crossterm::event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent};
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
 };
 use crossterm::{execute, ExecutableCommand};
-
+use retro::event::event::{Event, Events};
+use retro::handlers::handle_input;
 use retro::ui::help::help;
 use retro::ui::new_note::new_note;
 use retro::ui::room_info::room_info;
 use retro::{
     app::{mode::Mode, state::State},
     cli::RetroArgs,
-    handlers::handle_input,
     network::{actions::NetworkAction, remote::Remote},
     ui::{notes_list::notes_list, status_bar::status_bar},
 };
@@ -26,10 +27,10 @@ use tui::backend::CrosstermBackend;
 use tui::layout::Rect;
 use tui::widgets::Paragraph;
 use tui::Terminal;
-use tui_textarea::{Input, Key};
+use tui_textarea::TextArea;
 
 #[tokio::main]
-async fn start_tokio(io_rx: Receiver<NetworkAction>, network: &mut Remote) {
+async fn start_tokio(io_rx: Receiver<NetworkAction>, network: &Remote) {
     while let Ok(event) = io_rx.recv() {
         let _ = network.handle_event(event).await;
     }
@@ -43,22 +44,24 @@ async fn main() -> Result<()> {
 
     let args = RetroArgs::new();
     let (sync_io_tx, sync_io_rx) = std::sync::mpsc::channel::<NetworkAction>();
+    let mut textarea = new_note();
 
     let state = Arc::new(Mutex::new(State::new(sync_io_tx, args.clone())));
 
     state
         .lock()
         .expect("cannot do stuff")
-        .dispatch(NetworkAction::ListenForChanges);
+        .dispatch(NetworkAction::GetNotes);
 
     let cloned_state = Arc::clone(&state);
     let cloned_args = args.clone();
+
     std::thread::spawn(move || {
-        let mut network = Remote::new(&cloned_args.room, &state);
-        start_tokio(sync_io_rx, &mut network);
+        let network = Remote::new(&cloned_args.room, &state);
+        start_tokio(sync_io_rx, &network);
     });
 
-    start_ui(args, &cloned_state).await?;
+    start_ui(args, &cloned_state, &mut textarea).await?;
 
     Ok(())
 }
@@ -81,7 +84,11 @@ fn panic_hook(info: &PanicInfo<'_>) {
     let _ = quit();
 }
 
-async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
+async fn start_ui(
+    args: RetroArgs,
+    state: &Arc<Mutex<State>>,
+    textarea: &mut TextArea<'static>,
+) -> Result<()> {
     let mut stdout = stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     enable_raw_mode()?;
@@ -89,30 +96,15 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
     let mut backend = CrosstermBackend::new(stdout);
     backend.execute(SetTitle(args.room.clone()))?;
 
+    let events = Events::new(Duration::from_millis(200));
+
     let mut terminal = Terminal::new(backend)?;
-    let mut textarea = new_note();
 
     loop {
         let size = terminal.size()?;
-        let mut state = state.lock().unwrap();
-
-        let input: Input = crossterm::event::read()?.into();
-
-        if let (
-            Input {
-                key: Key::Char('q'),
-                ..
-            },
-            Mode::Normal,
-        ) = (&input, &state.mode)
-        {
-            quit()?;
-            return Ok(());
-        }
+        let mut state = state.lock().expect("Could not lock state");
 
         terminal.draw(|ui| {
-            handle_input(&input, &mut state, &mut textarea);
-
             // Notes list
             ui.render_widget(
                 notes_list(&state),
@@ -128,6 +120,11 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
             ui.render_widget(
                 Paragraph::new(format!("{} participants", &state.participants.len())),
                 Rect::new(size.width - 17, size.height - 1, 16, 1),
+            );
+
+            ui.render_widget(
+                Paragraph::new(state.tick_count.to_string()),
+                Rect::new(0, 0, 10, 1),
             );
 
             if state.show_help {
@@ -149,5 +146,22 @@ async fn start_ui(args: RetroArgs, state: &Arc<Mutex<State>>) -> Result<()> {
                 );
             }
         })?;
+
+        match events.next()? {
+            Event::Input(i) => {
+                if let (
+                    KeyEvent {
+                        code: KeyCode::Char('q'),
+                        ..
+                    },
+                    Mode::Normal,
+                ) = (i, &state.mode)
+                {
+                    return quit();
+                }
+                handle_input(i, state, textarea);
+            }
+            Event::Tick => state.tick(),
+        }
     }
 }

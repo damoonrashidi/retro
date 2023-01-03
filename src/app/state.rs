@@ -1,11 +1,10 @@
-use std::{collections::HashSet, sync::mpsc::Sender};
+use std::{collections::HashSet, fmt::Debug, sync::mpsc::Sender};
 
 use crate::{app::mode::Mode, app::note::Note, cli::RetroArgs, network::actions::NetworkAction};
 
 use super::sentiment::Sentiment;
 
 /// Application state
-#[derive(Debug)]
 pub struct State {
     /// what row is selected (used by the vote/group modes)
     pub selected_row: Option<usize>,
@@ -32,20 +31,30 @@ pub struct State {
     pub display_name: String,
 
     sender: Sender<NetworkAction>,
+
+    /// Tick count, decides when to redraw the ui
+    pub tick_count: usize,
+}
+
+impl Debug for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "state")
+    }
 }
 
 impl State {
     pub fn new(sender: Sender<NetworkAction>, args: RetroArgs) -> Self {
         State {
-            mode: Mode::Normal,
-            notes: vec![],
             selected_row: None,
             participants: HashSet::new(),
+            filter: None,
+            mode: Mode::Normal,
+            notes: vec![],
             my_votes: HashSet::new(),
             show_help: false,
-            filter: None,
-            sender,
             display_name: args.display_name,
+            sender,
+            tick_count: 0,
         }
     }
 
@@ -89,6 +98,10 @@ impl State {
         Err("No")
     }
 
+    pub fn tick(&mut self) {
+        self.tick_count = self.tick_count + 1;
+    }
+
     pub fn set_filter(&mut self, sentiment: Sentiment) {
         self.filter = Some(sentiment);
     }
@@ -125,21 +138,5 @@ impl State {
             (Sentiment::Sad, total.1),
             (Sentiment::Neutral, total.2),
         ]
-    }
-}
-
-impl Default for State {
-    fn default() -> Self {
-        State {
-            selected_row: None,
-            participants: HashSet::new(),
-            filter: None,
-            mode: Mode::Normal,
-            notes: vec![],
-            my_votes: HashSet::new(),
-            show_help: false,
-            sender: std::sync::mpsc::channel::<NetworkAction>().0,
-            display_name: "".to_string(),
-        }
     }
 }

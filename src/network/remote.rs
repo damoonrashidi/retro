@@ -21,13 +21,18 @@ use firestore_grpc::{
 
 use futures::{stream, StreamExt};
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Remote<'a> {
     project_id: &'static str,
 
     room_id: &'a String,
 
     pub state: &'a Arc<Mutex<State>>,
+}
+
+enum VoteDirection {
+    Up,
+    Down,
 }
 
 impl<'a> Remote<'a> {
@@ -48,9 +53,11 @@ impl<'a> Remote<'a> {
                 self.create_note(&note).await?;
             }
             NetworkAction::Vote(note) => {
-                self.upvote(&note).await?;
+                self.vote(&note, VoteDirection::Up).await?;
             }
-            NetworkAction::Unvote(note_id) => println!("unvote {}", note_id),
+            NetworkAction::Unvote(note) => {
+                self.vote(&note, VoteDirection::Down).await?;
+            }
             NetworkAction::Group(id1, id2) => println!("group {}{}", id1, id2),
             NetworkAction::GetNotes => {
                 self.get_notes().await?;
@@ -111,8 +118,7 @@ impl<'a> Remote<'a> {
             if msg.is_ok() {
                 let mut state = self.state.lock().expect("oh no");
                 state.dispatch(NetworkAction::GetNotes);
-                state.dispatch(NetworkAction::ListenForChanges);
-                break;
+                // state.dispatch(NetworkAction::ListenForChanges);
             }
         }
 
@@ -162,11 +168,15 @@ impl<'a> Remote<'a> {
         Ok(())
     }
 
-    async fn upvote(&self, note: &Note) -> Result<()> {
+    async fn vote(&self, note: &Note, direction: VoteDirection) -> Result<()> {
         let (_root, mut client, _) = self.get_client().await?;
 
         let changed = &Note {
-            votes: note.votes + 1,
+            votes: if let VoteDirection::Up = direction {
+                note.votes.checked_add(1).unwrap()
+            } else {
+                note.votes.checked_sub(1).unwrap()
+            },
             ..note.clone()
         };
 

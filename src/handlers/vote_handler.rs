@@ -13,7 +13,7 @@ pub fn handle_vote(input: &Input, state: &mut State) {
     match input {
         Input { key: Key::Down, .. } => {
             let next_row = match state.selected_row {
-                Some(row) => (row + 1).min(state.notes.len() - 1),
+                Some(row) => (row + 1).min(state.notes.len()),
                 None => 0,
             };
             state.select_row(next_row);
@@ -32,7 +32,7 @@ pub fn handle_vote(input: &Input, state: &mut State) {
         } => {
             if let Some(index) = state.selected_row {
                 if let Some(note) = &state.notes.clone().get(index) {
-                    state.dispatch(NetworkAction::Vote(Note::clone(note)))
+                    state.dispatch(NetworkAction::Vote(Note::clone(note)));
                 }
             }
         }
@@ -43,7 +43,7 @@ pub fn handle_vote(input: &Input, state: &mut State) {
         } => {
             if let Some(index) = state.selected_row {
                 if let Some(note) = &state.notes.clone().get(index) {
-                    state.dispatch(NetworkAction::Unvote(Note::clone(note)))
+                    state.dispatch(NetworkAction::Unvote(Note::clone(note)));
                 }
             }
         }

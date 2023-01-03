@@ -51,14 +51,14 @@ impl Note {
 
 impl Display for Note {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let (author, text) = (&self.author, &self.text);
+        let (author, text, sentiment) = (&self.author, &self.text, &self.sentiment);
         let votes = if self.votes > 0 {
             format!("[+{}]", self.votes)
         } else {
             "".to_string()
         };
 
-        write!(f, "{:<10}: {text} {votes}", author)
+        write!(f, "{:<8} {sentiment} {text} {votes}", author)
     }
 }
 
@@ -118,7 +118,14 @@ impl From<HashMap<String, Value>> for Note {
             _ => 0,
         };
 
-        let sentiment = Sentiment::Happy;
+        let sentiment = match values.get("sentiment").unwrap().value_type.clone().unwrap() {
+            ValueType::StringValue(sentiment) => match sentiment.as_str() {
+                ":)" => Sentiment::Happy,
+                ":(" => Sentiment::Sad,
+                _ => Sentiment::Neutral,
+            },
+            _ => Sentiment::Neutral,
+        };
 
         Note {
             id,
