@@ -13,9 +13,10 @@ use firestore_grpc::{
     v1::{
         firestore_client::FirestoreClient,
         listen_request::TargetChange,
+        listen_response::ResponseType,
         target::{DocumentsTarget, TargetType},
-        CreateDocumentRequest, Document, ListDocumentsRequest, ListenRequest, Target,
-        UpdateDocumentRequest,
+        CreateDocumentRequest, Document, ListDocumentsRequest, ListenRequest, ListenResponse,
+        Target, UpdateDocumentRequest,
     },
 };
 
@@ -63,7 +64,7 @@ impl<'a> Remote<'a> {
                 self.get_notes().await?;
             }
             NetworkAction::ListenForChanges => {
-                self.detect_changes().await?;
+                self.listen_for_changes().await?;
             }
         }
         Ok(())
@@ -89,7 +90,7 @@ impl<'a> Remote<'a> {
 
         Ok(note)
     }
-    async fn detect_changes(&self) -> Result<()> {
+    async fn listen_for_changes(&self) -> Result<()> {
         let (room, mut client, db) = self.get_client().await?;
 
         let req = ListenRequest {
@@ -115,10 +116,19 @@ impl<'a> Remote<'a> {
         let mut res = client.listen(req).await?.into_inner();
 
         while let Some(msg) = res.next().await {
-            if msg.is_ok() {
+            if let Ok(msg) = msg {
+                match msg {
+                    ListenResponse {
+                        response_type: Some(ResponseType::DocumentChange(document)),
+                    } => {
+                        println!("{:?}", document)
+                    }
+                    _ => {}
+                }
                 let mut state = self.state.lock().expect("oh no");
                 state.dispatch(NetworkAction::GetNotes);
-                // state.dispatch(NetworkAction::ListenForChanges);
+                state.dispatch(NetworkAction::ListenForChanges);
+                break;
             }
         }
 

@@ -12,7 +12,7 @@ pub fn handle_group(input: KeyEvent, state: &mut State) {
             ..
         } => {
             let next_row = match state.selected_row {
-                Some(row) => (row + 1).min(state.notes.len()),
+                Some(row) => (row + 1).min(state.notes.len().max(1) - 1),
                 None => 0,
             };
             state.select_row(next_row);

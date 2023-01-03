@@ -53,6 +53,11 @@ async fn main() -> Result<()> {
         .expect("cannot do stuff")
         .dispatch(NetworkAction::GetNotes);
 
+    state
+        .lock()
+        .expect("cannot do stuff")
+        .dispatch(NetworkAction::ListenForChanges);
+
     let cloned_state = Arc::clone(&state);
     let cloned_args = args.clone();
 
