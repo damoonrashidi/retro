@@ -24,7 +24,7 @@ use futures::{stream, StreamExt};
 
 #[derive(Clone, Debug)]
 pub struct Remote<'a> {
-    project_id: &'static str,
+    project_id: &'a str,
 
     room_id: &'a String,
 

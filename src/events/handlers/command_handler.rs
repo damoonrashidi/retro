@@ -1,10 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tui_textarea::{CursorMove, TextArea};
 
-use crate::{
-    app::{mode::Mode, note::Note, state::State},
-    network::actions::NetworkAction,
-};
+use crate::app::{mode::Mode, state::State};
 
 pub fn handle_command(input: KeyEvent, state: &mut State, textarea: &mut TextArea<'_>) {
     if state.mode != Mode::Command {
@@ -41,15 +38,20 @@ pub fn handle_command(input: KeyEvent, state: &mut State, textarea: &mut TextAre
             code: KeyCode::Enter,
             ..
         } => {
-            if !textarea.is_empty() {
-                let text = textarea.lines().join("\n");
-                state.dispatch(NetworkAction::PublishNote(Note::new(
-                    state.display_name.clone(),
-                    text,
-                )));
+            let selected = state.selected_rows.clone();
+
+            let ids = selected
+                .iter()
+                .filter_map(|index| state.notes.get(*index).map(|note| note.id.clone()))
+                .collect();
+
+            match textarea.lines().join("").get(0..1).unwrap() {
+                "v" => state.upvote(&ids),
+                "d" => state.unvote(&ids),
+                _ => {}
             }
-            textarea.delete_line_by_head();
         }
+
         input => {
             textarea.input(input);
         }
@@ -65,11 +67,11 @@ pub fn handle_command(input: KeyEvent, state: &mut State, textarea: &mut TextAre
         match command {
             "group" | "g" => {
                 let indicies = get_indicies(indices_str.to_owned());
-                state.select_rows(indicies);
+                state.select_rows(&indicies);
             }
             "vote" | "v" => {
                 let indicies = get_indicies(indices_str.to_owned());
-                state.select_rows(indicies);
+                state.select_rows(&indicies);
             }
             _ => {}
         }

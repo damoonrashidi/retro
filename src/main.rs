@@ -12,8 +12,10 @@ use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
 };
 use crossterm::{execute, ExecutableCommand};
-use retro::event::event::{Event, Events};
-use retro::handlers::handle_input;
+use retro::events::{
+    event::{Event, Events},
+    handlers::handle_input,
+};
 use retro::ui::command_textbox::command_textbox;
 use retro::ui::help::help;
 use retro::ui::new_note::new_note;
@@ -53,11 +55,6 @@ async fn main() -> Result<()> {
         .lock()
         .expect("cannot do stuff")
         .dispatch(NetworkAction::GetNotes);
-
-    state
-        .lock()
-        .expect("cannot do stuff")
-        .dispatch(NetworkAction::ListenForChanges);
 
     let cloned_state = Arc::clone(&state);
     let cloned_args = args.clone();
@@ -150,7 +147,7 @@ async fn start_ui(
             if state.mode == Mode::Insert {
                 ui.render_widget(
                     textarea.widget(),
-                    Rect::new(size.width / 2 - 15, size.height / 4, 30, 5),
+                    Rect::new(1, size.height / 4 * 3, size.width - 2, size.height / 4 - 2),
                 );
             }
 

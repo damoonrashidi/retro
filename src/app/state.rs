@@ -71,17 +71,29 @@ impl State {
         self.participants = participants;
     }
 
-    pub fn upvote(&mut self, note: &Note) {
-        if !self.my_votes.contains(&note.id) {
-            self.dispatch(NetworkAction::Vote(note.clone()));
-            self.my_votes.insert(note.id.clone());
+    pub fn upvote(&mut self, ids: &Vec<String>) {
+        for id in ids {
+            if let (Some(note), false) = (
+                self.notes.clone().into_iter().find(|note| note.id == *id),
+                self.my_votes.contains(id),
+            ) {
+                self.dispatch(NetworkAction::Vote(note.clone()));
+                self.my_votes.insert(note.id.clone());
+            }
         }
     }
 
-    pub fn downvote(&mut self, note: &Note) {
-        if self.my_votes.contains(&note.id) {
-            self.dispatch(NetworkAction::Unvote(note.clone()));
-            self.my_votes.remove(&note.id);
+    pub fn unvote(&mut self, ids: &Vec<String>) {
+        for id in ids {
+            if let (Some(note), true) = (
+                &self.notes.clone().into_iter().find(|note| note.id == *id),
+                self.my_votes.contains(id),
+            ) {
+                let cloned = note.clone();
+                self.dispatch(NetworkAction::Unvote(cloned));
+
+                // @TODO remove the current
+            }
         }
     }
 
@@ -93,8 +105,8 @@ impl State {
         println!("{}", id);
     }
 
-    pub fn select_rows(&mut self, rows: Vec<usize>) {
-        self.selected_rows = rows;
+    pub fn select_rows(&mut self, rows: &Vec<usize>) {
+        self.selected_rows = rows.to_owned();
     }
 
     pub fn deselect_rows(&mut self) {
