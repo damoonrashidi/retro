@@ -44,7 +44,7 @@ pub fn handle_insert(input: KeyEvent, state: &mut State, textarea: &mut TextArea
             textarea.delete_line_by_head();
         }
         input => {
-            textarea.input(input.clone());
+            textarea.input(input);
         }
     };
 }

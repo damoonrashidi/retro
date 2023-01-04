@@ -51,18 +51,18 @@ pub fn handle_command(input: KeyEvent, state: &mut State, textarea: &mut TextAre
             textarea.delete_line_by_head();
         }
         input => {
-            textarea.input(input.clone());
+            textarea.input(input);
         }
     };
 
-    match textarea
+    if let Some((command, indices_str)) = textarea
         .lines()
         .first()
         .unwrap()
         .as_str()
         .split_once(char::is_whitespace)
     {
-        Some((command, indices_str)) => match command {
+        match command {
             "group" | "g" => {
                 let indicies = get_indicies(indices_str.to_owned());
                 state.select_rows(indicies);
@@ -72,16 +72,14 @@ pub fn handle_command(input: KeyEvent, state: &mut State, textarea: &mut TextAre
                 state.select_rows(indicies);
             }
             _ => {}
-        },
-        None => {}
+        }
     }
 
     fn get_indicies(indices: String) -> Vec<usize> {
         indices
             .split(char::is_whitespace)
             .map(|it| it.parse())
-            .filter(|it| it.is_ok())
-            .map(|it| it.unwrap())
+            .filter_map(|it| it.ok())
             .collect()
     }
 }

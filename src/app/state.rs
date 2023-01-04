@@ -86,7 +86,7 @@ impl State {
     }
 
     pub fn tick(&mut self) {
-        self.tick_count = self.tick_count + 1;
+        self.tick_count += 1;
     }
 
     pub fn remove_note(&mut self, id: &String) {

@@ -26,7 +26,7 @@ pub fn display_note(note: &Note, mode: &Mode, index: &usize) -> String {
 }
 
 fn get_style(index: &usize, state: &State) -> Style {
-    let is_included = state.selected_rows.contains(&index);
+    let is_included = state.selected_rows.contains(index);
 
     let bg = match state.mode {
         Mode::Command => {

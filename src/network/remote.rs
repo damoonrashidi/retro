@@ -117,13 +117,11 @@ impl<'a> Remote<'a> {
 
         while let Some(msg) = res.next().await {
             if let Ok(msg) = msg {
-                match msg {
-                    ListenResponse {
-                        response_type: Some(ResponseType::DocumentChange(document)),
-                    } => {
-                        println!("{:?}", document)
-                    }
-                    _ => {}
+                if let ListenResponse {
+                    response_type: Some(ResponseType::DocumentChange(document)),
+                } = msg
+                {
+                    println!("{:?}", document)
                 }
                 let mut state = self.state.lock().expect("oh no");
                 state.dispatch(NetworkAction::GetNotes);
