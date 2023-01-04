@@ -8,7 +8,7 @@ use super::sentiment::Sentiment;
 /// Application state
 pub struct State {
     /// what row is selected (used by the vote/group modes)
-    pub selected_row: Option<usize>,
+    pub selected_rows: Vec<usize>,
 
     /// List of participants (display_names)
     pub participants: HashSet<String>,
@@ -40,7 +40,7 @@ pub struct State {
 impl State {
     pub fn new(sender: Sender<NetworkAction>, args: RetroArgs) -> Self {
         State {
-            selected_row: None,
+            selected_rows: vec![],
             participants: HashSet::new(),
             filter: None,
             mode: Mode::Normal,
@@ -85,39 +85,22 @@ impl State {
         }
     }
 
-    pub fn group_notes(&mut self, id1: &String, id2: &String) -> Result<Note, &str> {
-        if id1 == id2 {
-            return Err("");
-        }
-
-        Err("No")
-    }
-
     pub fn tick(&mut self) {
         self.tick_count = self.tick_count + 1;
-    }
-
-    pub fn set_filter(&mut self, sentiment: Sentiment) {
-        self.filter = Some(sentiment);
-    }
-
-    pub fn reset_filter(&mut self) {
-        self.filter = None;
     }
 
     pub fn remove_note(&mut self, id: &String) {
         println!("{}", id);
     }
 
-    pub fn select_row(&mut self, index: usize) {
-        self.selected_row = Some(index);
+    pub fn select_rows(&mut self, rows: Vec<usize>) {
+        self.selected_rows = rows;
     }
 
-    pub fn deselect_row(&mut self) {
-        self.selected_row = None;
+    pub fn deselect_rows(&mut self) {
+        self.selected_rows = vec![];
     }
 
-    #[allow(unused)]
     pub fn sentiment_count(&self) -> [(Sentiment, usize); 3] {
         let total = self
             .notes

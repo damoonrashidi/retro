@@ -6,32 +6,15 @@ pub fn handle_mode(input: KeyEvent, state: &mut State) {
     match state.mode {
         Mode::Normal => match input {
             KeyEvent {
-                code: KeyCode::Char('v'),
-                ..
-            } => {
-                state.mode = Mode::Vote;
-                if !state.notes.is_empty() {
-                    state.select_row(0);
-                }
-            }
-
-            KeyEvent {
-                code: KeyCode::Char('g'),
-                ..
-            } => {
-                state.mode = Mode::Group;
-                if !state.notes.is_empty() {
-                    state.select_row(0);
-                }
-            }
-            KeyEvent {
                 code: KeyCode::Char('i'),
                 ..
             } => state.mode = Mode::Insert,
+
             KeyEvent {
-                code: KeyCode::Char('f'),
+                code: KeyCode::Char(':'),
                 ..
-            } => state.mode = Mode::Find,
+            } => state.mode = Mode::Command,
+
             _ => {}
         },
         _ => {
@@ -40,7 +23,7 @@ pub fn handle_mode(input: KeyEvent, state: &mut State) {
             } = input
             {
                 state.mode = Mode::Normal;
-                state.deselect_row();
+                state.deselect_rows();
             }
         }
     };

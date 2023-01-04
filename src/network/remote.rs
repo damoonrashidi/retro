@@ -127,7 +127,7 @@ impl<'a> Remote<'a> {
                 }
                 let mut state = self.state.lock().expect("oh no");
                 state.dispatch(NetworkAction::GetNotes);
-                state.dispatch(NetworkAction::ListenForChanges);
+                // state.dispatch(NetworkAction::ListenForChanges);
                 break;
             }
         }

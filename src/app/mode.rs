@@ -11,14 +11,8 @@ pub enum Mode {
     /// Writing a new note
     Insert,
 
-    /// Vote or unvote for a note
-    Vote,
-
-    /// Group two notes together
-    Group,
-
-    /// Filter notes based on sentiment
-    Find,
+    /// Command mode - Group / vote / find
+    Command,
 }
 
 impl Mode {
@@ -27,9 +21,7 @@ impl Mode {
         match self {
             Self::Normal => Color::White,
             Self::Insert => Color::Blue,
-            Self::Group => Color::Red,
-            Self::Vote => Color::Green,
-            Self::Find => Color::Yellow,
+            Self::Command => Color::Red,
         }
     }
 }
@@ -39,9 +31,7 @@ impl fmt::Display for Mode {
         match self {
             Self::Normal => write!(f, " NOR "),
             Self::Insert => write!(f, " INS "),
-            Self::Group => write!(f, " GRP "),
-            Self::Vote => write!(f, " VOT "),
-            Self::Find => write!(f, " FND "),
+            Self::Command => write!(f, " CMD "),
         }
     }
 }

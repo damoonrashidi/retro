@@ -11,9 +11,7 @@ pub fn help(state: &State) -> Paragraph<'static> {
             r#"
 ?  Show/hide help
 ________________
-i  insert mode
-g  group mode
-v  vote mode
+:  command mode
 ________________
 e  export to csv
 q  quit retro
@@ -27,36 +25,14 @@ ________________
 ↵    Create note
 "#
         }
-        Mode::Find => {
+        Mode::Command => {
             r#"
- ?   Show/hide help
 ESC  Normal mode
 ________________
- )   Show happy notes 
- (   Show sad notes 
- |   Show neutral notes 
-"#
-        }
-        Mode::Vote => {
-            r#"
- ?   Show/hide help
-ESC  Normal mode
-________________
- ↑   Select Previous
- ↓   Select next
- ↵   Vote up selected
- ⌫   Unvote selected
-"#
-        }
-
-        Mode::Group => {
-            r#"
- ?   Show/hide help
-ESC  Normal mode
-________________
- ↑   Select Previous
- ↓   Select next
-0..9  Group selected with number
+ g   1 2 .. n
+ u   1 2 .. n upvote
+ d   1 2 .. n downvote
+ f   query
 "#
         }
     };

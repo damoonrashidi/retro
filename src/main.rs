@@ -14,6 +14,7 @@ use crossterm::terminal::{
 use crossterm::{execute, ExecutableCommand};
 use retro::event::event::{Event, Events};
 use retro::handlers::handle_input;
+use retro::ui::command_textbox::command_textbox;
 use retro::ui::help::help;
 use retro::ui::new_note::new_note;
 use retro::ui::room_info::room_info;
@@ -98,10 +99,12 @@ async fn start_ui(
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     enable_raw_mode()?;
 
+    let mut command_textarea = command_textbox();
+
     let mut backend = CrosstermBackend::new(stdout);
     backend.execute(SetTitle(args.room.clone()))?;
 
-    let events = Events::new(Duration::from_millis(200));
+    let events = Events::new(Duration::from_millis(8));
 
     let mut terminal = Terminal::new(backend)?;
 
@@ -150,6 +153,13 @@ async fn start_ui(
                     Rect::new(size.width / 2 - 15, size.height / 4, 30, 5),
                 );
             }
+
+            if state.mode == Mode::Command {
+                ui.render_widget(
+                    command_textarea.widget(),
+                    Rect::new(0, size.height - 4, size.width, 3),
+                )
+            }
         })?;
 
         match events.next()? {
@@ -164,7 +174,7 @@ async fn start_ui(
                 {
                     return quit();
                 }
-                handle_input(i, &mut state, textarea);
+                handle_input(i, &mut state, textarea, &mut command_textarea);
             }
             Event::Tick => state.tick(),
         }

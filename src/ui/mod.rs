@@ -1,3 +1,4 @@
+pub mod command_textbox;
 pub mod help;
 pub mod new_note;
 pub mod notes_list;

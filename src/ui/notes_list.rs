@@ -11,36 +11,26 @@ pub fn notes_list(state: &State) -> List<'static> {
         .iter()
         .enumerate()
         .map(|(index, note)| {
-            ListItem::new(display_note(note, &state.mode, index)).style(get_style(index, state))
+            ListItem::new(display_note(note, &state.mode, &index)).style(get_style(&index, state))
         })
         .collect();
 
     List::new(items).block(Block::default().borders(Borders::all()).title("Notes"))
 }
 
-pub fn display_note(note: &Note, mode: &Mode, index: usize) -> String {
+pub fn display_note(note: &Note, mode: &Mode, index: &usize) -> String {
     match mode {
-        Mode::Group => format!("{index} {note}",),
+        Mode::Command => format!("{index} {note}",),
         _ => note.to_string(),
     }
 }
 
-fn get_style(index: usize, state: &State) -> Style {
-    let is_selected = match state.selected_row {
-        Some(selected) => selected == index,
-        None => false,
-    };
+fn get_style(index: &usize, state: &State) -> Style {
+    let is_included = state.selected_rows.contains(&index);
 
     let bg = match state.mode {
-        Mode::Group => {
-            if is_selected {
-                Color::LightRed
-            } else {
-                Color::Reset
-            }
-        }
-        Mode::Vote => {
-            if is_selected {
+        Mode::Command => {
+            if is_included {
                 Color::LightGreen
             } else {
                 Color::Reset
